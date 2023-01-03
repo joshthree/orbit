@@ -35,7 +35,7 @@ public class PolyLock implements PolyLockInterface{
 	private BigInteger[] orders;
 	
 	private CryptoData[] publicForms;
-	
+	 
 	private transient ECOwnedPedersenCommitment[] ownedCoefficientCommitments;
 	private transient BigInteger[] coefficients;
 	private ECPedersenCommitment[] coefficientCommitments;
