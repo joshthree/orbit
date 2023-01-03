@@ -16,3 +16,4 @@ public interface EncryptedVote {
 	Object getCiphertext();
 
 }
+ 
