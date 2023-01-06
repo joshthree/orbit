@@ -41,7 +41,7 @@ public class PaillierTest {
 		ZKPProtocol blah2 = new PaillierProofOfZero();
 		ZKPProtocol blah3 = new PaillierProofOfEqualityDifferentGenerators();
 		
-		CryptoData environment = new CryptoDataArray(new BigInteger[] {g, n, n2});
+		CryptoData environment = new CryptoDataArray(new BigInteger[] {n, n2, g});
 		{
 			BigInteger rp = ZKToolkit.random(n, rand);
 			BigInteger mp = ZKToolkit.random(n, rand);
@@ -63,8 +63,54 @@ public class PaillierTest {
 				e2.printStackTrace();
 			}
 		}
+		//pok simulator
+		{
+			BigInteger z1 = ZKToolkit.random(n, rand);
+			BigInteger z2 = ZKToolkit.random(n, rand);
+			BigInteger c = ZKToolkit.random(n, rand);
+			CryptoData publicInput = new CryptoDataArray(new BigInteger[] {cipher1});
+			CryptoData secrets = new CryptoDataArray(new BigInteger[] {z1, z2});
+			BigInteger challenge = new BigInteger (n.bitLength()-1, rand);
+			try {
+				CryptoData a = blah.initialCommSim(publicInput, secrets, c, environment);
+				CryptoData z = blah.simulatorGetResponse(publicInput, secrets);
+				
+				System.out.println(blah.verifyResponse(publicInput, a, z, c, environment));
+			} catch (MultipleTrueProofException e2) {
+				// TODO Auto-generated catch block
+				e2.printStackTrace();
+			} catch (NoTrueProofException e2) {
+				// TODO Auto-generated catch block
+				e2.printStackTrace();
+			} catch (ArraySizesDoNotMatchException e2) {
+				// TODO Auto-generated catch block
+				e2.printStackTrace();
+			}
+		}
 		
-		{		//FOR PROOF OF PAILLIER HiDES 0
+		{		//FOR PROOF OF PAILLIER HIDES 0
+			BigInteger z1 = ZKToolkit.random(n, rand);
+			BigInteger c = ZKToolkit.random(n, rand);
+			BigInteger rp = ZKToolkit.random(n, rand);
+			CryptoData publicInput = new CryptoDataArray(new BigInteger[] {cipher2});  	//The ciphertext from cipher.getEncryptionProofData(m)
+			CryptoData secrets = new CryptoDataArray(new BigInteger[] {z1});			//rp is proof ephemeral key, r is cipher ephemeral key
+			try {
+				CryptoData a = blah2.initialCommSim(publicInput, secrets, c, environment);
+				CryptoData z = blah2.simulatorGetResponse(publicInput, secrets);
+				System.out.println(blah2.verifyResponse(publicInput, a, z, c, environment));
+			} catch (MultipleTrueProofException e2) {
+				// TODO Auto-generated catch block
+				e2.printStackTrace();
+			} catch (NoTrueProofException e2) {
+				// TODO Auto-generated catch block
+				e2.printStackTrace();
+			} catch (ArraySizesDoNotMatchException e2) {
+				// TODO Auto-generated catch block
+				e2.printStackTrace();
+			}
+		}
+		
+		{		//FOR SIMULATOR OF PAILLIER HIDES 0
 			BigInteger rp = ZKToolkit.random(n, rand);
 			CryptoData publicInput = new CryptoDataArray(new BigInteger[] {cipher2});  	//The ciphertext from cipher.getEncryptionProofData(m)
 			CryptoData secrets = new CryptoDataArray(new BigInteger[] {rp, r});			//rp is proof ephemeral key, r is cipher ephemeral key
@@ -85,7 +131,7 @@ public class PaillierTest {
 			}
 		}
 		{
-			CryptoData environment2 = new CryptoDataArray(new BigInteger[] {g, cipher1, n, n2});
+			CryptoData environment2 = new CryptoDataArray(new BigInteger[] {n, n2, g, cipher1});
 		
 			BigInteger r1p = ZKToolkit.random(n, rand);
 			BigInteger r2p = ZKToolkit.random(n, rand);

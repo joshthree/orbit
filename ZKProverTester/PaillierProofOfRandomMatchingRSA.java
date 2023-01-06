@@ -6,6 +6,8 @@ import zero_knowledge_proofs.CryptoData.CryptoData;
 import zero_knowledge_proofs.CryptoData.CryptoDataArray;
 
 public class PaillierProofOfRandomMatchingRSA extends ZKPProtocol {
+	
+	//BAD THING TO HAVE!!! 
 
 	//publicInput = [paillierCipher, RSAcipher]
 	//secrets = [m', x', m, x]

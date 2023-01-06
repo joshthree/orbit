@@ -16,22 +16,18 @@ public class PaillierProofOfZero extends ZKPProtocol {
 			throws MultipleTrueProofException, NoTrueProofException, ArraySizesDoNotMatchException {
 		if (publicInput == null || secrets == null) return null;
 		try {
-			BigInteger[] data = new BigInteger[2];
-			CryptoData[] e = environment.getCryptoDataArray();  // e = [pg, g, h, n, n2, enc]
-			CryptoData[] s = secrets.getCryptoDataArray();		// s = [m', x', m, x]
+			BigInteger[] data = new BigInteger[1];				//cipher = g^0*R^n
+			CryptoData[] e = environment.getCryptoDataArray();  // e = [g, n, n2]
+			CryptoData[] s = secrets.getCryptoDataArray();		// s = [rp, r]
 			
-			BigInteger pg = e[0].getBigInt();
-			BigInteger g = e[1].getBigInt();
-			BigInteger h = e[2].getBigInt();
-			BigInteger n = e[3].getBigInt();
-			BigInteger n2 = e[4].getBigInt();
-			BigInteger enc = e[5].getBigInt();
+			BigInteger g = e[2].getBigInt();
+			BigInteger n = e[0].getBigInt();
+			BigInteger n2 = e[1].getBigInt();
 			
-			BigInteger mp = s[0].getBigInt();
-			BigInteger xp = s[1].getBigInt();
+			BigInteger r = s[0].getBigInt();
+			BigInteger ephemeral = s[1].getBigInt();
 			
-			data[0] = pg.modPow(mp, n2).multiply(h.modPow(xp, n)).mod(n2); //pg^(mp) (mod n^2) * h^xp mod 
-			data[1] = g.modPow(xp, n).modPow(enc, n);
+			data[0] = r.modPow(n, n2); // r^n mod n^2
 			
 			
 			CryptoData toReturn = new CryptoDataArray(data);
@@ -53,7 +49,23 @@ public class PaillierProofOfZero extends ZKPProtocol {
 					throws MultipleTrueProofException, ArraySizesDoNotMatchException, NoTrueProofException {
 		if (publicInput == null || secrets == null) return null;
 		try {
-			return null;
+
+			CryptoData[] p = publicInput.getCryptoDataArray();			// s = [rp, r]  -- rp is r for proof, r is r for ciphertext
+			CryptoData[] s = secrets.getCryptoDataArray();			// s = [rp, r]  -- rp is r for proof, r is r for ciphertext
+			CryptoData[] e = environment.getCryptoDataArray();		// e = [n, n2, g]
+			
+			BigInteger n = e[0].getBigInt();
+			BigInteger n2 = e[1].getBigInt();
+			
+			BigInteger cipher = p[0].getBigInt();
+
+			BigInteger z = s[0].getBigInt();
+			
+			BigInteger[] data = new BigInteger[1];
+			
+			data[0] = cipher.modPow(challenge.negate(), n2).multiply(z.modPow(n, n2)).mod(n2);
+			
+			return new CryptoDataArray(data);
 		} catch (NullPointerException e) {
 			e.printStackTrace();
 			System.out.println(publicInput);
@@ -68,18 +80,16 @@ public class PaillierProofOfZero extends ZKPProtocol {
 			CryptoData environment) throws NoTrueProofException, MultipleTrueProofException {
 		if(publicInput == null || secrets == null) return null;
 		BigInteger[] array = new BigInteger[2];
-		CryptoData[] s = secrets.getCryptoDataArray();			// s = [m', x', m, x]
-		CryptoData[] e = environment.getCryptoDataArray();		// e = [pg, g, h, n, n2, enc]
+		CryptoData[] s = secrets.getCryptoDataArray();			// s = [rp, r]  -- rp is r for proof, r is r for ciphertext
+		CryptoData[] e = environment.getCryptoDataArray();		// e = [n, n2, g]
 
-		BigInteger m = s[2].getBigInt();
-		BigInteger mp = s[0].getBigInt();
-		BigInteger x = s[2].getBigInt();
-		BigInteger xp = s[0].getBigInt();
+		BigInteger rp = s[0].getBigInt();
+		BigInteger r = s[1].getBigInt();
 		
-		BigInteger n = e[3].getBigInt();
-		BigInteger n2 = e[4].getBigInt();
+		BigInteger n = e[0].getBigInt();
+		BigInteger n2 = e[1].getBigInt();
 		
-		array[0] = xp.multiply(x.modPow(challenge, n2)).mod(n);  //r'*r^e
+		array[0] = rp.multiply(r.modPow(challenge, n2)).mod(n);  //r'*r^e
 		return new CryptoDataArray(array);
 	}
 
@@ -101,8 +111,8 @@ public class PaillierProofOfZero extends ZKPProtocol {
 		CryptoData[] i = input.getCryptoDataArray();
 		CryptoData[] a_pack = a.getCryptoDataArray();
 
-		BigInteger n = e[1].getBigInt();
-		BigInteger n2 = e[2].getBigInt();
+		BigInteger n = e[0].getBigInt();
+		BigInteger n2 = e[1].getBigInt();
 		
 		BigInteger cipher = i[0].getBigInt();
 		
@@ -139,8 +149,11 @@ public class PaillierProofOfZero extends ZKPProtocol {
 
 	@Override
 	public CryptoData simulatorGetResponse(CryptoData input) {
-		// TODO Auto-generated method stub
-		return null;
+		if(input == null) return null;
+		CryptoData[] in = input.getCryptoDataArray();
+		BigInteger[] out = new BigInteger[1];
+		out[0] = in[1].getBigInt();
+		return new CryptoDataArray(out); 
 	}
 
 }

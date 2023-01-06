@@ -15,9 +15,9 @@ public class PaillierProofOfKnowledge extends ZKPProtocol {
 		CryptoData[] i = input.getCryptoDataArray();
 		CryptoData[] a_pack = a.getCryptoDataArray();
 
-		BigInteger g = e[0].getBigInt();
-		BigInteger n = e[1].getBigInt();
-		BigInteger n2 = e[2].getBigInt();
+		BigInteger g = e[2].getBigInt();
+		BigInteger n = e[0].getBigInt();
+		BigInteger n2 = e[1].getBigInt();
 		
 		BigInteger cipher = i[0].getBigInt();
 		
@@ -70,9 +70,9 @@ public class PaillierProofOfKnowledge extends ZKPProtocol {
 			CryptoData[] e = environment.getCryptoDataArray();  // e = [g, n, n^2]
 			CryptoData[] s = secrets.getCryptoDataArray();		// s = [rp, mp, r, m]
 
-			BigInteger g = e[0].getBigInt();
-			BigInteger n = e[1].getBigInt();
-			BigInteger n2 = e[2].getBigInt();
+			BigInteger g = e[2].getBigInt();
+			BigInteger n = e[0].getBigInt();
+			BigInteger n2 = e[1].getBigInt();
 			
 			BigInteger rp = s[0].getBigInt();
 			BigInteger mp = s[1].getBigInt();
@@ -103,16 +103,16 @@ public class PaillierProofOfKnowledge extends ZKPProtocol {
 			CryptoData[] i = publicInput.getCryptoDataArray();	// i = [cipher]
 			CryptoData[] s = secrets.getCryptoDataArray();		// s = [z1, z2]
 
-			BigInteger g = e[0].getBigInt();
-			BigInteger n = e[1].getBigInt();
-			BigInteger n2 = e[2].getBigInt();
+			BigInteger g = e[2].getBigInt();
+			BigInteger n = e[0].getBigInt();
+			BigInteger n2 = e[1].getBigInt();
 			
 			BigInteger cipher = i[0].getBigInt();
 			
 			BigInteger z1 = s[0].getBigInt();
 			BigInteger z2 = s[1].getBigInt();
 			
-			data[0] = (g.modPow(z1, n2).multiply(z2.modPow(n, n2)).mod(n).multiply(cipher.modPow(challenge.negate(), n2))).mod(n2);
+			data[0] = (g.modPow(z1, n2).multiply(z2.modPow(n, n2)).mod(n2).multiply(cipher.modPow(challenge.negate(), n2))).mod(n2);
 			CryptoData toReturn = new CryptoDataArray(data);
 			return toReturn;
 		} catch (NullPointerException e) {
@@ -137,8 +137,8 @@ public class PaillierProofOfKnowledge extends ZKPProtocol {
 		BigInteger rp = s[0].getBigInt();
 		BigInteger mp = s[1].getBigInt(); 
 		
-		BigInteger n = e[1].getBigInt();
-		BigInteger n2 = e[2].getBigInt();
+		BigInteger n = e[0].getBigInt();
+		BigInteger n2 = e[1].getBigInt();
 		
 		array[0] = mp.add(m.multiply(challenge).mod(n)).mod(n);
 		array[1] = rp.multiply(r.modPow(challenge, n)).mod(n);  //r'*r^e
