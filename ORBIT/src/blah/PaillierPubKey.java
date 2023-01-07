@@ -75,12 +75,14 @@ public class PaillierPubKey implements Additive_Pub_Key{
 	@Override
 	public AdditiveCiphertext encrypt(BigInteger m, BigInteger r) {
 		if(n2 == null) n2 = n.pow(2);
+		if(!r.gcd(n2).equals(BigInteger.ONE)) {
+			throw new ArithmeticException("r is not relatively prime.");
+		}
 		if(m.compareTo(n) >= 0) {
 			System.out.println("Too big, handle later");
 		}
 		
 		BigInteger cipher = g.modPow(m,n2).multiply(r.modPow(n, n2)).mod(n2);
-		
 		return new PaillierCiphertext(cipher, new PaillierPubKey(this));
 	}
 	@Override
@@ -96,7 +98,7 @@ public class PaillierPubKey implements Additive_Pub_Key{
 		BigInteger r;
 		do {
 			r = new BigInteger(n.bitLength(), rand).mod(n);
-		}while(!r.gcd(n).equals(BigInteger.ONE));
+		}while(!r.gcd(n2).equals(BigInteger.ONE));
 		return r;
 	}
 	@Override
@@ -106,7 +108,7 @@ public class PaillierPubKey implements Additive_Pub_Key{
 	@Override
 	public CryptoData getZKEnvironment() {
 		// TODO Auto-generated method stub
-		return new CryptoDataArray(new BigInteger[] {getG(), getN(), getN2()});
+		return new CryptoDataArray(new BigInteger[] {getN(), getN2(), getG()});
 	}
 	
 }

@@ -7,6 +7,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="bcprov-jdk15on-1.62.jar"/>
-	<classpathentry kind="lib" path="/ZKProverTester"/>
+	<classpathentry kind="lib" path="/ZKProverTester/bin"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

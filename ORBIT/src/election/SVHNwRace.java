@@ -6,11 +6,11 @@ import java.io.ObjectOutputStream;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import blah.AdditiveCiphertext;
 import blah.Additive_Priv_Key;
 import blah.Additive_Pub_Key;
-import blah.PaillierPubKey;
 import zero_knowledge_proofs.ArraySizesDoNotMatchException;
 import zero_knowledge_proofs.MultipleTrueProofException;
 import zero_knowledge_proofs.NoTrueProofException;
@@ -48,7 +48,6 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 			m = BigInteger.TWO.pow((vote-1)*bitSeperation);
 		}
 		BigInteger ephemeral = raceKey.generateEphemeral(rand);
-		
 		AdditiveCiphertext ciphertext =  raceKey.encrypt(m, ephemeral);
 		
 		ZKPProtocol baseProof = raceKey.getZKPforProofOfEncryption();
@@ -58,7 +57,6 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 		for(int i = 0; i < zkpArray.length; i++) {
 			zkpArray[i] = baseProof;
 		}
-		
 		ZKPProtocol fullProof = new ZeroKnowledgeOrProver(zkpArray);
 		
 		CryptoData[] envUnpacked = new CryptoData[zkpArray.length];
@@ -83,7 +81,7 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 				//Build cryptodata[] for publicInputs
 				publicUnpacked[i] = new CryptoDataArray(new CryptoData[]{ciphertext.getEncryptionProofData(m2)});
 				//Build cryptodata[] for secrets
-				BigInteger r = ZKToolkit.random(order, rand);
+				BigInteger r = raceKey.generateEphemeral(rand);
 				secretsUnpacked[i] = new CryptoDataArray(new BigInteger[]{r, ephemeral});
 				//populate simulatedChallenges[i] with 0.
 				simulatedChallenges[i] = new BigIntData(BigInteger.ZERO);
@@ -93,9 +91,8 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 				//Build cryptodata[] for publicInputs
 				publicUnpacked[i] = new CryptoDataArray(new CryptoData[]{ciphertext.getEncryptionProofData(m2)});
 				//Build cryptodata[] for secrets
-				BigInteger r = ZKToolkit.random(order, rand);
-				BigInteger z = ZKToolkit.random(order, rand);
-				secretsUnpacked[i] = new CryptoDataArray(new BigInteger[]{r, z});
+				BigInteger z = raceKey.generateEphemeral(rand);
+				secretsUnpacked[i] = new CryptoDataArray(new BigInteger[]{z});
 				//populate simulatedChallenges[i] with 0.
 				simulatedChallenges[i] = new BigIntData(ZKToolkit.random(order, rand));
 			}
@@ -106,9 +103,9 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 		CryptoData env = new CryptoDataArray(envUnpacked);
 		CryptoData publicInputs = new CryptoDataArray(publicUnpacked);
 		CryptoData secrets = new CryptoDataArray(secretsUnpacked);
-		
+		CryptoData[] transcripts = null;
 		try {
-			CryptoData[] transcripts = fullProof.proveFiatShamir(publicInputs, secrets, env);
+			transcripts = fullProof.proveFiatShamir(publicInputs, secrets, env);
 		} catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -137,25 +134,70 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 		
 		
 		
-		return null;
+		return new SVHNwEncryptedVote (ciphertext, transcripts);
 	}
 
 	@Override
 	public boolean verify(EncryptedVote phi) {
-		// TODO Auto-generated method stub
-		return false;
+		SVHNwEncryptedVote phi2 = (SVHNwEncryptedVote) phi;
+		AdditiveCiphertext cipher = (AdditiveCiphertext) phi2.getCiphertext();
+		CryptoData[] transcript = phi2.getProofTranscript();
+		
+		CryptoData[] envUnpacked = new CryptoData[numCandidates+1];
+		CryptoData[] publicUnpacked = new CryptoData[numCandidates+1];
+		
+		CryptoData miniEnv = raceKey.getZKEnvironment();
+		
+		BigInteger order = raceKey.getOrder();
+		
+		for(int i = 0; i < numCandidates+1; i++) {
+			BigInteger m2;//2^((v-1)*beta)
+			if (i == 0) {
+				m2 = BigInteger.ZERO;
+			}
+			else {
+				m2 = BigInteger.TWO.pow((i-1)*bitSeperation);
+			}
+			// True Proof.
+			//Build cryptodata[] for publicInputs
+			publicUnpacked[i] = new CryptoDataArray(new CryptoData[]{cipher.getEncryptionProofData(m2)});
+		
+			envUnpacked[i] = miniEnv;
+		}
+		
+		CryptoData env = new CryptoDataArray(envUnpacked);
+		CryptoData publicInputs = new CryptoDataArray(publicUnpacked);
+		
+		ZKPProtocol baseProof = raceKey.getZKPforProofOfEncryption();
+		
+		ZKPProtocol[] zkpArray = new ZKPProtocol[numCandidates+1];
+		
+		for(int i = 0; i < zkpArray.length; i++) {
+			zkpArray[i] = baseProof;
+		}
+		
+		ZKPProtocol fullProof = new ZeroKnowledgeOrProver(zkpArray);
+		
+		try {
+			return fullProof.verifyFiatShamir(publicInputs, transcript[0], transcript[1], env);
+		} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException
+				| ArraySizesDoNotMatchException e) {
+			e.printStackTrace();
+			return false;
+		}
 	}
 
 	@Override
 	public EncryptedVote reRandomizeVote(EncryptedVote phi, SecureRandom rand) {
 		// TODO Auto-generated method stub
+		//Maybe not needed potentially remove.
 		return null;
 	}
 
 	@Override
 	public EncryptedVote zero_vote(EncryptedVote phi) {
-		// TODO Auto-generated method stub
-		return null;
+		AdditiveCiphertext zeroVote = raceKey.getEmptyCiphertext();
+		return new SVHNwEncryptedVote(zeroVote, null);
 	}
 
 	@Override
@@ -167,7 +209,12 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 	@Override
 	public RaceResults tally(ArrayList<EncryptedVote> cPsi, Additive_Priv_Key p, ObjectInputStream[] in,
 			ObjectOutputStream[] out, SecureRandom rand) {
-		// TODO Auto-generated method stub
+		AdditiveCiphertext bigPsiprime = raceKey.getEmptyCiphertext();
+		for (int i = 0; i < cPsi.size(); i++) {
+			bigPsiprime = bigPsiprime.homomorphicAdd((AdditiveCiphertext)(cPsi.get(i).getCiphertext()));
+		}
+		System.out.println("resulting ciphertext ");
+		System.out.println(bigPsiprime);
 		return null;
 	}
 

@@ -28,7 +28,7 @@ public class PaillierCiphertext extends AdditiveCiphertext{
 			throw new InputMismatchException();
 		}
 		
-		return new PaillierCiphertext(cipher.multiply(((PaillierCiphertext) toAdd).cipher), paillierPubKey);
+		return new PaillierCiphertext(cipher.multiply(((PaillierCiphertext) toAdd).cipher).mod(paillierPubKey.getN2()), paillierPubKey);
 	}
 
 	@Override
@@ -84,12 +84,12 @@ public class PaillierCiphertext extends AdditiveCiphertext{
 
 	@Override
 	public AdditiveCiphertext scalarAdd(BigInteger toAdd) {		
-		return this.homomorphicAdd(paillierPubKey.encrypt(toAdd, BigInteger.ZERO));
+		return this.homomorphicAdd(paillierPubKey.encrypt(toAdd, BigInteger.ONE));
 	}
 
 	@Override
 	public CryptoData getEncryptionProofData(BigInteger message) {
-		BigInteger cipher = (BigInteger) this.homomorphicAdd(paillierPubKey.encrypt(message.negate(), BigInteger.ZERO)).getCipher();
+		BigInteger cipher = (BigInteger) this.scalarAdd(message.negate()).getCipher();
 		CryptoData toReturn = new BigIntData(cipher);
 		return toReturn;
 	}

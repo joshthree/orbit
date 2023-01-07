@@ -4,6 +4,7 @@ import java.math.BigInteger;
 import java.security.SecureRandom;
 
 import blah.AdditiveCiphertext;
+import blah.Additive_Pub_Key;
 import zero_knowledge_proofs.CryptoData.CryptoData;
 
 public class SVHNwEncryptedVote implements EncryptedVote {
@@ -23,19 +24,22 @@ public class SVHNwEncryptedVote implements EncryptedVote {
 
 	@Override
 	public EncryptedVote rerandomize(SecureRandom rand) {
-		// TODO Auto-generated method stub
-		return null;
+		BigInteger r = ((Additive_Pub_Key) (cipher.getPub_Key())).generateEphemeral(rand);
+		return rerandomize(r);
 	}
 
 	@Override
 	public EncryptedVote rerandomize(BigInteger r) {
-		// TODO Auto-generated method stub
-		return null;
+		
+		//Rerandomize
+		AdditiveCiphertext cipher2 = (AdditiveCiphertext) cipher.rerandomize(r);
+		
+		return new SVHNwEncryptedVote(cipher2, null);
 	}
 
 	@Override
 	public Object getCiphertext() {
-		return cipher.getCipher();
+		return cipher;
 	}
 
 }
