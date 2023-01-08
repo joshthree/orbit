@@ -1,0 +1,90 @@
+package test;
+
+import java.security.SecureRandom;
+
+import blah.PaillierPrivKey;
+import blah.PaillierPubKey;
+import election.Election;
+import election.EncryptedVote;
+import election.Race;
+import election.SVHNwRace;
+import election.SVHNwVoterDecision;
+import election.VoterDecision;
+
+public class Test2 {
+	public static void main(String arg[]) {
+		int numRaces = 5;
+		int numCandidates = 4;
+		int numVotes = 50;
+		
+		//SecureRandom rand = new SecureRandom("fhdjkghqeriupgyqhkdlvdjchlzvkcjxvbfiuhagperidfhgkhfdspogieqrjl".getBytes());
+		SecureRandom rand = new SecureRandom();
+		
+		PaillierPrivKey priv = new PaillierPrivKey(2048, rand); 
+		System.out.println(priv);
+		PaillierPubKey pub = (PaillierPubKey) priv.getPubKey();
+		int bitSeparation = 33;
+		
+		Race[] races = new Race[numRaces];
+		
+		for (int i = 0; i < numRaces; i++) {
+			races[i] = new SVHNwRace("", numCandidates, pub, bitSeparation);
+		}
+		
+		Election election = new Election(races, String.format("test election, numCandidates=%d, numRaces=%d", numCandidates, numRaces));
+		
+		int[][] bdResults = new int[numRaces][numCandidates+1];
+		
+		EncryptedVote[][] encryptedVotes = new EncryptedVote[numVotes][];
+		
+		long start0 = System.currentTimeMillis();
+		
+		for (int i = 0; i < numVotes; i++) {
+			//Create VoterDecision array
+			
+			VoterDecision[] voterDecisions = new VoterDecision[numRaces];
+			
+			for (int j = 0; j < numRaces; j++) {
+				//Fill the array with random votes
+				int vote = rand.nextInt(numCandidates+1);
+				voterDecisions[j] = new SVHNwVoterDecision(vote);
+				
+				//Update bdResults//Update bdResults
+				bdResults[j][vote]++; 
+				
+				
+				
+			}
+			//Run vote function with the array.
+			encryptedVotes[i] = election.vote(voterDecisions, rand);
+		}
+		
+		long start1 = System.currentTimeMillis();
+		
+		
+		boolean verified = true;
+		
+		for (int i = 0; i < numVotes; i++) {
+			if (!election.verify(encryptedVotes[i])) {
+				verified = false;
+				System.out.printf("race %d failed\n", i);
+			}
+			
+		}
+		
+		if (verified) {
+			System.out.println("All good");
+		}
+		
+		long start2 = System.currentTimeMillis();
+		
+		for (int i = 0; i < numRaces; i++) {
+			for (int j = 0; j < numCandidates; j++) {
+				System.out.println(bdResults[i][j]);
+			}
+		}
+		
+		System.out.println(start1-start0);
+		System.out.println(start2-start1);
+	}
+}
