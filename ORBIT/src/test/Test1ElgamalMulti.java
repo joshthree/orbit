@@ -19,10 +19,10 @@ import blah.PaillierPubKey;
 import election.EncryptedVote;
 import election.Race;
 import election.VoterDecision;
-import election.singleCipherSVHNw.SVHNwRace;
-import election.singleCipherSVHNw.SVHNwVoterDecision;
+import election.multiCipherSVHNw.SVHNwRaceMulti;
+import election.multiCipherSVHNw.SVHNwVoterDecisionMulti;
 
-public class Test1b {
+public class Test1ElgamalMulti {
 	public static void main(String arg[]) {
 		ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("secp256k1");
 		
@@ -37,10 +37,10 @@ public class Test1b {
 		System.out.println(priv);
 		Additive_Pub_Key pub = priv.getPubKey();
 		int bitSeparation = 33;
-		Race race1 = new SVHNwRace (null, numCandidates, pub, bitSeparation);
+		Race race1 = new SVHNwRaceMulti(null, numCandidates, pub);
 		VoterDecision[] vote = new VoterDecision[numCandidates+1];
 		for (int i = 0; i <= numCandidates; i++) {
-			vote[i] = new SVHNwVoterDecision(i);
+			vote[i] = new SVHNwVoterDecisionMulti(i);
 		}
 //		EncryptedVote[] bigPsi = new EncryptedVote[numCandidates+1];
 //		for (int i = 0; i <= numCandidates; i++) {
@@ -62,6 +62,7 @@ public class Test1b {
 		long start2 = System.currentTimeMillis();
 		boolean[] verify = new boolean[bigPsi2.size()];
 		for (int i = 0; i < bigPsi2.size(); i++) {
+			System.out.printf("\tVerifying ballot %d:  \n", i);
 			verify[i] = race1.verify(bigPsi2.get(i));
 		}
 

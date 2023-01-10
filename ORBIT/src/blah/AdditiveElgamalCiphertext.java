@@ -132,6 +132,26 @@ public class AdditiveElgamalCiphertext extends AdditiveCiphertext {
 		// TODO Auto-generated method stub
 		return null;
 	}
+	@Override
+	public BigInteger homomorphicSumEphemeral(BigInteger[] ephemerals) {
+		BigInteger toReturn = ephemerals[0];
+		for(int i = 1; i < ephemerals.length; i++) {
+			toReturn = toReturn.add(ephemerals[i]).mod(pub.getOrder());
+		}
+		return toReturn;
+	}
+	@Override
+	public BigInteger homomorphicAddEphemeral(BigInteger ephemeral1, BigInteger ephemeral2) {
+		return ephemeral1.add(ephemeral2);
+	}
+	@Override
+	public BigInteger scalarAddEphemeral(BigInteger toAdd, BigInteger ephemeral) {
+		return ephemeral;
+	}
+	@Override
+	public BigInteger scalarMultiplyEphemeral(BigInteger toMultiply, BigInteger ephemeral) {
+		return ephemeral.multiply(toMultiply);
+	}
 
 
 }

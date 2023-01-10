@@ -11,22 +11,23 @@ import blah.PaillierPubKey;
 import election.EncryptedVote;
 import election.Race;
 import election.VoterDecision;
-import election.singleCipherSVHNw.SVHNwRace;
-import election.singleCipherSVHNw.SVHNwVoterDecision;
+import election.multiCipherSVHNw.SVHNwRaceMulti;
+import election.multiCipherSVHNw.SVHNwVoterDecisionMulti;
 
-public class Test1 {
+public class Test1PaillierMulti {
 	public static void main(String arg[]) {
+		
 		SecureRandom rand = new SecureRandom("fhdjkghqeriupgyqhkdlvdjchlzvkcjxvbfiuhagperidfhgkhfdspogieqrjl".getBytes());
 //		SecureRandom rand = new SecureRandom();
-		int numCandidates = 4;
 		PaillierPrivKey priv = new PaillierPrivKey(2048, rand); 
+		int numCandidates = 4;
 		System.out.println(priv);
 		PaillierPubKey pub = (PaillierPubKey) priv.getPubKey();
 		int bitSeparation = 33;
-		Race race1 = new SVHNwRace (null, numCandidates, pub, bitSeparation);
+		Race race1 = new SVHNwRaceMulti (null, numCandidates, pub);
 		VoterDecision[] vote = new VoterDecision[numCandidates+1];
 		for (int i = 0; i <= numCandidates; i++) {
-			vote[i] = new SVHNwVoterDecision(i);
+			vote[i] = new SVHNwVoterDecisionMulti(i);
 		}
 //		EncryptedVote[] bigPsi = new EncryptedVote[numCandidates+1];
 //		for (int i = 0; i <= numCandidates; i++) {

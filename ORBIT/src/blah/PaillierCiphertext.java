@@ -127,6 +127,32 @@ public class PaillierCiphertext extends AdditiveCiphertext{
 		return homomorphicAdd(paillierPubKey.encrypt(BigInteger.ZERO, ephemeral));
 	}
 
+	@Override
+	public BigInteger homomorphicSumEphemeral(BigInteger[] ephemerals) {
+		BigInteger toReturn = BigInteger.ONE;
+		for(int i = 0; i < ephemerals.length; i++) {
+			toReturn = toReturn.multiply(ephemerals[i]).mod(paillierPubKey.getN());
+		}
+		return toReturn;
+	}
+
+	@Override
+	public BigInteger homomorphicAddEphemeral(BigInteger ephemeral1, BigInteger ephemeral2) {
+		return ephemeral1.multiply(ephemeral2).mod(paillierPubKey.getN());
+	}
+
+	@Override
+	public BigInteger scalarAddEphemeral(BigInteger toAdd, BigInteger ephemeral) {
+
+		return ephemeral;
+	}
+
+	@Override
+	public BigInteger scalarMultiplyEphemeral(BigInteger toMultiply, BigInteger ephemeral) {
+		// TODO Auto-generated method stub
+		return ephemeral.modPow(toMultiply, paillierPubKey.getN());
+	}
+
 
 	
 	

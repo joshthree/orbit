@@ -11,7 +11,7 @@ public interface EncryptedVote {
 	
 	EncryptedVote rerandomize(SecureRandom rand);
 	
-	EncryptedVote rerandomize(BigInteger r);
+	EncryptedVote rerandomize(BigInteger[] r);
 	
 	Object getCiphertext();
 
