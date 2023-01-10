@@ -3,14 +3,18 @@ package election;
 import java.security.SecureRandom;
 import java.util.InputMismatchException;
 
+import blah.Additive_Pub_Key;
+
 public class Election {
 	
-	Race[] races;
-	String desc;
+	private Race[] races;
+	private String desc;
+	private Additive_Pub_Key minerKey;
 	
-	public Election(Race[] races, String desc) {
+	public Election(Race[] races, String desc, Additive_Pub_Key minerKey) {
 		this.races = races;
 		this.desc = desc;
+		this.minerKey = minerKey;
 	}
 
 	public EncryptedVote[] vote(VoterDecision[] voterDecisions, SecureRandom rand) {
@@ -41,5 +45,8 @@ public class Election {
 			return false;
 		}
 		return true;
+	}
+	public Additive_Pub_Key getMinerKey() {
+		return minerKey;
 	}
 }

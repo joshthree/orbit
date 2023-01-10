@@ -1,5 +1,5 @@
 package transactions;
 
-public class RegistrationTransaction implements Transaction{
+public class RegistrationTransaction implements SourceTransaction{
 
 }

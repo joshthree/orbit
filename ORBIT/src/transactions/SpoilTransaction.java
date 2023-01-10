@@ -1,5 +1,5 @@
 package transactions;
 
-public class SpoilTransaction implements Transaction{
+public class SpoilTransaction implements SourceTransaction{
 
 }

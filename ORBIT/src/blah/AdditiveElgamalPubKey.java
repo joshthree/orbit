@@ -42,11 +42,9 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 	}
 
 	public ECPoint getG() {
-		// TODO Auto-generated method stub  return c as byte array
 		return g;
 	}
 	public ECPoint getY() {
-		// TODO Auto-generated method stub  return c as byte array
 		return y;
 	}
 	@Override
