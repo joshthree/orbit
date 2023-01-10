@@ -1,6 +1,7 @@
 package blah;
 
 import java.math.BigInteger;
+import java.security.SecureRandom;
 
 import zero_knowledge_proofs.CryptoData.CryptoData;
 
@@ -26,5 +27,12 @@ public abstract class AdditiveCiphertext extends Ciphertext {
 	public abstract AdditiveCiphertext getEmptyEncryption();
 	protected abstract void mutableAdd(AdditiveCiphertext toAdd);
 	
-	public abstract CryptoData getEncryptionProofData(BigInteger toAdd);
+	public abstract AdditiveCiphertext rerandomize(SecureRandom rand);
+	public abstract AdditiveCiphertext rerandomize(BigInteger ephemeral);
+	
+	public abstract CryptoData[] getEncryptionProverData(BigInteger message, BigInteger ephemeral, SecureRandom rand);
+	public abstract CryptoData[] getEncryptionVerifierData(BigInteger message);
+	
+	public abstract CryptoData[] getRerandomizationProverData(AdditiveCiphertext original, BigInteger ephemeral, SecureRandom rand);
+	public abstract CryptoData[] getRerandomizationVerifierData(AdditiveCiphertext original);
 }

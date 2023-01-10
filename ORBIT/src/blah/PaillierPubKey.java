@@ -1,6 +1,10 @@
 package blah;
 
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.math.BigInteger;
+import java.security.SecureRandom;
 import java.util.Random;
 
 import zero_knowledge_proofs.PaillierProofOfZero;
@@ -17,7 +21,7 @@ public class PaillierPubKey implements Additive_Pub_Key{
 	private BigInteger n;
 	transient private BigInteger n2;
 	private BigInteger g;
-	
+	private transient CryptoData envZero;
 	
 	protected PaillierPubKey(BigInteger n, BigInteger n2, BigInteger g) {
 		System.out.println("in key, n = " + n);
@@ -42,7 +46,7 @@ public class PaillierPubKey implements Additive_Pub_Key{
 	}
 
 	@Override
-	public AdditiveCiphertext encrypt(BigInteger m, Random rand) {
+	public AdditiveCiphertext encrypt(BigInteger m, SecureRandom rand) {
 		if(n2 == null) n2 = n.pow(2);
 		if(m.compareTo(n) >= 0) {
 			System.out.println("Too big, handle later");
@@ -94,7 +98,7 @@ public class PaillierPubKey implements Additive_Pub_Key{
 		return g;
 	}
 	@Override
-	public BigInteger generateEphemeral(Random rand) {
+	public BigInteger generateEphemeral(SecureRandom rand) {
 		BigInteger r;
 		do {
 			r = new BigInteger(n.bitLength(), rand).mod(n);
@@ -106,9 +110,22 @@ public class PaillierPubKey implements Additive_Pub_Key{
 		return new PaillierProofOfZero();
 	}
 	@Override
-	public CryptoData getZKEnvironment() {
-		// TODO Auto-generated method stub
-		return new CryptoDataArray(new BigInteger[] {getN(), getN2(), getG()});
+	public CryptoData getZKZeroEnvironment() {
+		if(envZero == null) envZero = new CryptoDataArray(new BigInteger[] {getN(), getN2(), getG()});
+		return envZero;
+	}
+	@Override
+	public void writeExternal(ObjectOutput out) throws IOException {
+		out.writeObject(n);
+		out.writeObject(g);
+		
+	}
+	@Override
+	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+		n = (BigInteger) in.readObject();
+		g = (BigInteger) in.readObject();
+		n2 = n.pow(2);
+		
 	}
 	
 }

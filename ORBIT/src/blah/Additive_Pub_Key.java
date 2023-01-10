@@ -1,7 +1,7 @@
 package blah;
 
 import java.math.BigInteger;
-import java.util.Random;
+import java.security.SecureRandom;
 
 import zero_knowledge_proofs.ZKPProtocol;
 import zero_knowledge_proofs.CryptoData.CryptoData;
@@ -10,7 +10,7 @@ public interface Additive_Pub_Key extends Pub_Key {
 	byte[] getPublicKey();
 	
 	AdditiveCiphertext getEmptyCiphertext();
-	AdditiveCiphertext encrypt(BigInteger m, Random rand);
+	AdditiveCiphertext encrypt(BigInteger m, SecureRandom rand);
 	
 	ZKPProtocol getZKPforProofOfEncryption();
 	
@@ -18,9 +18,8 @@ public interface Additive_Pub_Key extends Pub_Key {
 	
 	BigInteger getOrder();
 	
-	BigInteger generateEphemeral(Random rand);
 
-	BigInteger getG();
+	CryptoData getZKZeroEnvironment();
 
-	CryptoData getZKEnvironment();
+	BigInteger generateEphemeral(SecureRandom rand);
 }

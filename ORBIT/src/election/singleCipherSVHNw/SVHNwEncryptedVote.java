@@ -1,10 +1,11 @@
-package election;
+package election.singleCipherSVHNw;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
 
 import blah.AdditiveCiphertext;
 import blah.Additive_Pub_Key;
+import election.EncryptedVote;
 import zero_knowledge_proofs.CryptoData.CryptoData;
 
 public class SVHNwEncryptedVote implements EncryptedVote {

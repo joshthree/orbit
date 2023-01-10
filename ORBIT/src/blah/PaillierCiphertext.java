@@ -1,11 +1,13 @@
 package blah;
 
 import java.math.BigInteger;
+import java.security.SecureRandom;
 import java.util.InputMismatchException;
 import java.util.Random;
 
 import zero_knowledge_proofs.CryptoData.BigIntData;
 import zero_knowledge_proofs.CryptoData.CryptoData;
+import zero_knowledge_proofs.CryptoData.CryptoDataArray;
 
 public class PaillierCiphertext extends AdditiveCiphertext{
 
@@ -15,6 +17,7 @@ public class PaillierCiphertext extends AdditiveCiphertext{
 	private static final long serialVersionUID = -1549561901729415208L;
 	private BigInteger cipher;
 	private PaillierPubKey paillierPubKey;
+	private transient CryptoData proofOfZeroEnvironment;
 	
 	public PaillierCiphertext(BigInteger cipher, Additive_Pub_Key paillierPubKey) {
 		// TODO Auto-generated constructor stub
@@ -49,19 +52,6 @@ public class PaillierCiphertext extends AdditiveCiphertext{
 		cipher = cipher.multiply(((PaillierCiphertext) toAdd).cipher);		
 	}
 
-
-	@Override
-	public Ciphertext rerandomize(BigInteger r) {
-		PaillierCiphertext toReturn = new PaillierCiphertext(cipher.multiply(r.modPow(paillierPubKey.getN(), paillierPubKey.getN2())).mod(paillierPubKey.getN2()), paillierPubKey);
-		return toReturn;
-	}
-
-	@Override
-	public Ciphertext rerandomize(Random rand) {
-		BigInteger r = new BigInteger(paillierPubKey.getN().bitLength(), rand);
-		return rerandomize(r);
-	}
-
 	@Override
 	public BigInteger getCipher() {
 		return cipher;
@@ -88,11 +78,56 @@ public class PaillierCiphertext extends AdditiveCiphertext{
 	}
 
 	@Override
-	public CryptoData getEncryptionProofData(BigInteger message) {
+	public CryptoData[] getEncryptionProverData(BigInteger message, BigInteger ephemeral, SecureRandom rand) {
+		CryptoData[] toReturn = new CryptoData[3];
 		BigInteger cipher = (BigInteger) this.scalarAdd(message.negate()).getCipher();
-		CryptoData toReturn = new BigIntData(cipher);
+		toReturn[0] = new CryptoDataArray(new CryptoData[] {new BigIntData(cipher)});
+		CryptoData[] secrets;
+		if(ephemeral == null) {
+			secrets = new CryptoData[1];
+		}
+		else {
+			secrets = new CryptoData[2];
+			secrets[1] = new BigIntData(ephemeral);
+		}
+		secrets[0] = new BigIntData(paillierPubKey.generateEphemeral(rand));
+		toReturn[1] = new CryptoDataArray(secrets);
+		toReturn[2] = paillierPubKey.getZKZeroEnvironment();
 		return toReturn;
 	}
+
+	@Override
+	public CryptoData[] getEncryptionVerifierData(BigInteger message) {
+		CryptoData[] toReturn = new CryptoData[3];
+		BigInteger cipher = (BigInteger) this.scalarAdd(message.negate()).getCipher();
+		toReturn[0] = new CryptoDataArray(new CryptoData[] {new BigIntData(cipher)});
+		toReturn[1] = paillierPubKey.getZKZeroEnvironment();
+		return toReturn;
+	}
+
+	@Override
+	public CryptoData[] getRerandomizationProverData(AdditiveCiphertext original, BigInteger ephemeral,
+			SecureRandom rand) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	@Override
+	public CryptoData[] getRerandomizationVerifierData(AdditiveCiphertext original) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public AdditiveCiphertext rerandomize(SecureRandom rand) {
+		return rerandomize(paillierPubKey.generateEphemeral(rand));
+	}
+
+	@Override
+	public AdditiveCiphertext rerandomize(BigInteger ephemeral) {
+		return homomorphicAdd(paillierPubKey.encrypt(BigInteger.ZERO, ephemeral));
+	}
+
+
 	
 	
 }

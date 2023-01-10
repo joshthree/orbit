@@ -7,9 +7,9 @@ import blah.PaillierPubKey;
 import election.Election;
 import election.EncryptedVote;
 import election.Race;
-import election.SVHNwRace;
-import election.SVHNwVoterDecision;
 import election.VoterDecision;
+import election.singleCipherSVHNw.SVHNwRace;
+import election.singleCipherSVHNw.SVHNwVoterDecision;
 
 public class Test2 {
 	public static void main(String arg[]) {

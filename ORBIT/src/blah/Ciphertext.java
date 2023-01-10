@@ -2,6 +2,7 @@ package blah;
 
 import java.io.Serializable;
 import java.math.BigInteger;
+import java.security.SecureRandom;
 import java.util.Random;
 
 public abstract class Ciphertext implements Serializable {
@@ -19,5 +20,5 @@ public abstract class Ciphertext implements Serializable {
 	
 
 	public abstract Ciphertext rerandomize(BigInteger r);
-	public abstract Ciphertext rerandomize(Random rand);
+	public abstract Ciphertext rerandomize(SecureRandom rand);
 }

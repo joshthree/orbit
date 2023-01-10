@@ -1,4 +1,6 @@
-package election;
+package election.singleCipherSVHNw;
+
+import election.VoterDecision;
 
 public class SVHNwVoterDecision implements VoterDecision {
 	

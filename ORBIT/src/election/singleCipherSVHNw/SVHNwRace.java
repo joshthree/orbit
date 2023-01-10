@@ -1,4 +1,4 @@
-package election;
+package election.singleCipherSVHNw;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -11,6 +11,10 @@ import java.util.Arrays;
 import blah.AdditiveCiphertext;
 import blah.Additive_Priv_Key;
 import blah.Additive_Pub_Key;
+import election.EncryptedVote;
+import election.Race;
+import election.RaceResults;
+import election.VoterDecision;
 import zero_knowledge_proofs.ArraySizesDoNotMatchException;
 import zero_knowledge_proofs.MultipleTrueProofException;
 import zero_knowledge_proofs.NoTrueProofException;
@@ -64,8 +68,6 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 		CryptoData[] secretsUnpacked = new CryptoData[zkpArray.length + 1];
 		CryptoData[] simulatedChallenges = new CryptoData[zkpArray.length];
 		
-		CryptoData miniEnv = raceKey.getZKEnvironment();
-		
 		BigInteger order = raceKey.getOrder();
 		
 		for(int i = 0; i < zkpArray.length; i++) {
@@ -76,27 +78,20 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 			else {
 				m2 = BigInteger.TWO.pow((i-1)*bitSeperation);
 			}
+			CryptoData[] proofInputs;
 			if (vote == i) {
 				// True Proof.
-				//Build cryptodata[] for publicInputs
-				publicUnpacked[i] = new CryptoDataArray(new CryptoData[]{ciphertext.getEncryptionProofData(m2)});
-				//Build cryptodata[] for secrets
-				BigInteger r = raceKey.generateEphemeral(rand);
-				secretsUnpacked[i] = new CryptoDataArray(new BigInteger[]{r, ephemeral});
-				//populate simulatedChallenges[i] with 0.
+				proofInputs = ciphertext.getEncryptionProverData(m2, ephemeral, rand);
 				simulatedChallenges[i] = new BigIntData(BigInteger.ZERO);
 			}
 			else {
-				// Simulated Proof.
-				//Build cryptodata[] for publicInputs
-				publicUnpacked[i] = new CryptoDataArray(new CryptoData[]{ciphertext.getEncryptionProofData(m2)});
-				//Build cryptodata[] for secrets
-				BigInteger z = raceKey.generateEphemeral(rand);
-				secretsUnpacked[i] = new CryptoDataArray(new BigInteger[]{z});
-				//populate simulatedChallenges[i] with 0.
+				// simulated proof
+				proofInputs = ciphertext.getEncryptionProverData(m2, null, rand);
 				simulatedChallenges[i] = new BigIntData(ZKToolkit.random(order, rand));
 			}
-			envUnpacked[i] = miniEnv;
+			publicUnpacked[i] = proofInputs[0];
+			secretsUnpacked[i] = proofInputs[1];
+			envUnpacked[i] = proofInputs[2];
 		}
 		
 		secretsUnpacked[secretsUnpacked.length - 1] = new CryptoDataArray(simulatedChallenges); 
@@ -146,10 +141,6 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 		CryptoData[] envUnpacked = new CryptoData[numCandidates+1];
 		CryptoData[] publicUnpacked = new CryptoData[numCandidates+1];
 		
-		CryptoData miniEnv = raceKey.getZKEnvironment();
-		
-		BigInteger order = raceKey.getOrder();
-		
 		for(int i = 0; i < numCandidates+1; i++) {
 			BigInteger m2;//2^((v-1)*beta)
 			if (i == 0) {
@@ -160,9 +151,10 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 			}
 			// True Proof.
 			//Build cryptodata[] for publicInputs
-			publicUnpacked[i] = new CryptoDataArray(new CryptoData[]{cipher.getEncryptionProofData(m2)});
+			CryptoData[] vInputs = cipher.getEncryptionVerifierData(m2);
+			publicUnpacked[i] = vInputs[0];
 		
-			envUnpacked[i] = miniEnv;
+			envUnpacked[i] = vInputs[1];
 		}
 		
 		CryptoData env = new CryptoDataArray(envUnpacked);
