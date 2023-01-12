@@ -3,15 +3,16 @@ package election;
 import java.security.SecureRandom;
 import java.util.InputMismatchException;
 
+import blah.AdditiveElgamalPubKey;
 import blah.Additive_Pub_Key;
 
 public class Election {
 	
 	private Race[] races;
 	private String desc;
-	private Additive_Pub_Key minerKey;
+	private AdditiveElgamalPubKey minerKey;
 	
-	public Election(Race[] races, String desc, Additive_Pub_Key minerKey) {
+	public Election(Race[] races, String desc, AdditiveElgamalPubKey minerKey) {
 		this.races = races;
 		this.desc = desc;
 		this.minerKey = minerKey;
@@ -46,7 +47,7 @@ public class Election {
 		}
 		return true;
 	}
-	public Additive_Pub_Key getMinerKey() {
+	public AdditiveElgamalPubKey getMinerKey() {
 		return minerKey;
 	}
 }

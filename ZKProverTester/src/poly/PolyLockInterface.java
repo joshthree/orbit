@@ -8,7 +8,7 @@ import zero_knowledge_proofs.ZKPProtocol;
 import zero_knowledge_proofs.CryptoData.CryptoData;
 
 public interface PolyLockInterface extends Serializable {
-	ZKPProtocol getProver();
+	ZKPProtocol getProver(BigInteger order);
 	CryptoData buildPublicInputs(CryptoData[] environments);
 	CryptoData buildProverData(CryptoData[] environments, SecureRandom rand);
 	CryptoData buildEnvironment(CryptoData[] environments);

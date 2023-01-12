@@ -219,7 +219,7 @@ abstract public class VarianceToolkit {
 		BigInteger in02;
 		BigInteger in11;
 		BigInteger in12;
-		BigIntData zero = new BigIntData(BigInteger.ZERO);
+		BigIntData zero = new BigIntData(null);
 		CryptoData[] inputs = new CryptoData[bitLength];
 		for(int i = 0; i < bitLength; i++)
 		{
@@ -401,7 +401,7 @@ abstract public class VarianceToolkit {
 				
 				if(shuffle[i] == j)
 				{
-					challenges[j] = BigInteger.ZERO;
+					challenges[j] = null;
 				}
 				else
 				{
@@ -618,7 +618,7 @@ abstract public class VarianceToolkit {
 		{	 //00 01 10 11  bit is 1
 			//using ECEqualDiscreteLog 
 			inputs2[0] = new BigIntData(fakeChallenge);
-			inputs2[1] = new BigIntData(BigInteger.ZERO);
+			inputs2[1] = new BigIntData(null);
 			inputs0[0] = new CryptoDataArray(new CryptoData[] {new ECPointData(bitComm.getECPointData(c)), new BigIntData(randoms[0])});
 			inputs1[0] = new CryptoDataArray(new CryptoData[] {new ECPointData(bitComm.getECPointData(c).subtract(g)), new BigIntData(randoms[5]), new BigIntData(bitCommKey)});
 
@@ -655,7 +655,7 @@ abstract public class VarianceToolkit {
 		else
 		{
 			inputs2[1] = new BigIntData(fakeChallenge);
-			inputs2[0] = new BigIntData(BigInteger.ZERO);
+			inputs2[0] = new BigIntData(null);
 			inputs0[0] = new CryptoDataArray(new CryptoData[] {new ECPointData(bitComm.getECPointData(c)), new BigIntData(randoms[0]), new BigIntData(bitCommKey)});
 			inputs1[0] = new CryptoDataArray(new CryptoData[] {new ECPointData(bitComm.getECPointData(c).subtract(g)), new BigIntData(randoms[5])});
 			CryptoData[] enc0 = encryptions[0].getCryptoDataArray();
@@ -764,7 +764,7 @@ abstract public class VarianceToolkit {
 		return new CryptoDataArray(new CryptoData[] {middleLayer, middleLayer, middleLayer,baseEnvironment});
 	}
 	
-	public static ZKPProtocol createMultiSigProofNaive(int n, int k, ZKPProtocol keyProtocol)
+	public static ZKPProtocol createMultiSigProofNaive(int n, int k, ZKPProtocol keyProtocol, BigInteger order)
 	{
 		
 		if(n < k)
@@ -793,7 +793,7 @@ abstract public class VarianceToolkit {
 			{
 				orProtocol[i] = midLayer;
 			}
-			return new ZeroKnowledgeOrProver(orProtocol);
+			return new ZeroKnowledgeOrProver(orProtocol, order);
 		}
 		else return midLayer;
 	}
@@ -883,7 +883,7 @@ abstract public class VarianceToolkit {
 						}
 						orData[i] = combined;
 						
-						simulatedChallenges[i] = new BigIntData(BigInteger.ZERO);
+						simulatedChallenges[i] = new BigIntData(null);
 					}
 					else
 					{
@@ -963,7 +963,7 @@ abstract public class VarianceToolkit {
 				{
 					currentPositions[i] = i;
 				}
-				simulatedChallenges[0] = new BigIntData(BigInteger.ZERO);
+				simulatedChallenges[0] = new BigIntData(null);
 				for(int i = 0; i < nCrk; i++)
 				{
 					
@@ -1132,14 +1132,14 @@ abstract public class VarianceToolkit {
 		if(claimed)
 		{
 			simulatedChallenges[0] = new BigIntData(simulatedChallenge);
-			simulatedChallenges[1] = new BigIntData(BigInteger.ZERO);
+			simulatedChallenges[1] = new BigIntData(null);
 			
 			outer[0] = createSchnorrSimulatorInputsNoChecks(comm0, order, r);
 			inner[0] = createSchnorrProverInputsNoChecks(commB,new BigIntData(commitmentKey), order, r);
 		}
 		else
 		{
-			simulatedChallenges[0] = new BigIntData(BigInteger.ZERO);
+			simulatedChallenges[0] = new BigIntData(null);
 			simulatedChallenges[1] = new BigIntData(simulatedChallenge);
 			
 			outer[0] = createSchnorrProverInputsNoChecks(comm0, new BigIntData(commitmentKey), order, r);
@@ -1185,7 +1185,7 @@ abstract public class VarianceToolkit {
 		return new CryptoDataArray(outer);
 	}
 
-	public static ZKPProtocol createVarianceMultiSigProof(ZKPProtocol keyProtocol, ZKPProtocol commitmentProtocol) {
+	public static ZKPProtocol createVarianceMultiSigProof(ZKPProtocol keyProtocol, ZKPProtocol commitmentProtocol, BigInteger order) {
 		ZKPProtocol[] and = new ZKPProtocol[2];
 		ZKPProtocol[] or = new ZKPProtocol[2];
 		and[0] = commitmentProtocol;
@@ -1193,10 +1193,10 @@ abstract public class VarianceToolkit {
 		
 		or[0] = commitmentProtocol;
 		or[1] = new ZeroKnowledgeAndProver(and);
-		return new ZeroKnowledgeOrProver(or);
+		return new ZeroKnowledgeOrProver(or, order);
 	}
 	
-	public static ZKPProtocol createMultiSigProof(int n, int k, ZKPProtocol baseProtocol, ZKPProtocol commitmentProtocol) {
+	public static ZKPProtocol createMultiSigProof(int n, int k, ZKPProtocol baseProtocol, ZKPProtocol commitmentProtocol, BigInteger order) {
 
 		if(n < k)
 		{
@@ -1211,7 +1211,7 @@ abstract public class VarianceToolkit {
 			for(int i = 0; i < n; i++){
 				proofInner[i] = baseProtocol;
 			}
-			return new ZeroKnowledgeOrProver(proofInner);
+			return new ZeroKnowledgeOrProver(proofInner, order);
 		}
 		if(k == n)
 		{
@@ -1230,12 +1230,12 @@ abstract public class VarianceToolkit {
 		
 		or[0] = commitmentProtocol;
 		or[1] = new ZeroKnowledgeAndProver(andInner);
-		ZKPProtocol oneProof = new ZeroKnowledgeOrProver(or);
+		ZKPProtocol oneProof = new ZeroKnowledgeOrProver(or, order);
 		ZKPProtocol[] proof = new ZKPProtocol[n];
 		for(int i = 0; i < n; i++) {
 			proof[i] = oneProof;
 		}
-		andOuter[0] = new ZeroKnowledgeOrProver(proof);
+		andOuter[0] = new ZeroKnowledgeOrProver(proof, order);
 		andOuter[1] = commitmentProtocol;
 		return new ZeroKnowledgeAndProver(andOuter);
 	}
@@ -1336,7 +1336,7 @@ abstract public class VarianceToolkit {
 				CryptoData[] or = new CryptoData[n + 1];
 				for(int i = 0; i < n; i++){
 					if(i == positions[0]){
-						simulatedChallenges[i] = new BigIntData(BigInteger.ZERO);
+						simulatedChallenges[i] = new BigIntData(null);
 						if(privateKeys[0] == null){
 							or[i] = null;
 						}
@@ -1381,7 +1381,7 @@ abstract public class VarianceToolkit {
 					}
 					or[0] = createSchnorrSimulatorInputsNoChecks(new ECPointData(commitments[i].getCommitment(baseEnvironment)), order, rand);
 					or[1] = new CryptoDataArray(andInner);
-					or[2] = new CryptoDataArray(new CryptoData[] {new BigIntData(new BigInteger(255, rand)), new BigIntData(BigInteger.ZERO)});
+					or[2] = new CryptoDataArray(new CryptoData[] {new BigIntData(new BigInteger(255, rand)), new BigIntData(null)});
 					
 					counter++;
 				}
@@ -1390,7 +1390,7 @@ abstract public class VarianceToolkit {
 					andInner[1] = createSchnorrSimulatorInputsNoChecks(publicKeys[i], order, rand);
 					or[0] = createSchnorrProverInputsNoChecks(new ECPointData(commitments[i].getCommitment(baseEnvironment)), new BigIntData(ephemeralKey[i]), order, rand);
 					or[1] = new CryptoDataArray(andInner);
-					or[2] = new CryptoDataArray(new CryptoData[] {new BigIntData(BigInteger.ZERO),new BigIntData(new BigInteger(255, rand))});
+					or[2] = new CryptoDataArray(new CryptoData[] {new BigIntData(null),new BigIntData(new BigInteger(255, rand))});
 				}
 				data[i] = new CryptoDataArray(or);
 			}
@@ -1431,7 +1431,7 @@ abstract public class VarianceToolkit {
 				for(int i = 0; i < n; i++){
 					data[i] = createSchnorrSimulatorInputsNoChecks(publicKeys[i], order, rand);
 					if(i != 0) simulatedChallenges[i] = new BigIntData(new BigInteger(255, rand));
-					else simulatedChallenges[i] = new BigIntData(BigInteger.ZERO);
+					else simulatedChallenges[i] = new BigIntData(null);
 				}
 				data[n] = new CryptoDataArray(simulatedChallenges);
 				return new CryptoDataArray(data);
@@ -1454,7 +1454,7 @@ abstract public class VarianceToolkit {
 				andInner[1] = createSchnorrSimulatorInputsNoChecks(publicKeys[i], order, rand);
 				or[0] = createSchnorrProverInputsNoChecks(new ECPointData(commitments[i].getCommitment(baseEnvironment)), new BigIntData(ephemeralKey[i]), order, rand);
 				or[1] = new CryptoDataArray(andInner);
-				or[2] = new CryptoDataArray(new CryptoData[] {new BigIntData(BigInteger.ZERO),new BigIntData(new BigInteger(255, rand))});
+				or[2] = new CryptoDataArray(new CryptoData[] {new BigIntData(null),new BigIntData(new BigInteger(255, rand))});
 				data[i] = new CryptoDataArray(or);
 			}
 			andOuter[0] = new CryptoDataArray(data);

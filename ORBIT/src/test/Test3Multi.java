@@ -2,7 +2,9 @@ package test;
 
 import java.security.SecureRandom;
 
+import blah.AdditiveElgamalPrivKey;
 import blah.AdditiveElgamalPubKey;
+import blah.Additive_Priv_Key;
 import blah.Additive_Pub_Key;
 import blah.PaillierPrivKey;
 import blah.PaillierPubKey;
@@ -13,7 +15,7 @@ import election.VoterDecision;
 import election.multiCipherSVHNw.SVHNwRaceMulti;
 import election.multiCipherSVHNw.SVHNwVoterDecisionMulti;
 
-public class Test3Multi2 {
+public class Test3Multi {
 	public static void main(String arg[]) {
 		int numRaces = 5;
 		int numCandidates = 4;
@@ -91,8 +93,5 @@ public class Test3Multi2 {
 			}
 			System.out.println();
 		}
-		
-		System.out.println(start1-start0);
-		System.out.println(start2-start1);
 	}
 }

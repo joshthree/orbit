@@ -10,6 +10,10 @@ import zero_knowledge_proofs.CryptoData.CryptoData;
 
 public class SVHNwEncryptedVote implements EncryptedVote {
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -2151827978056330592L;
 	private AdditiveCiphertext cipher;
 	private CryptoData[] transcript;
 	

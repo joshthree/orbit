@@ -1,9 +1,14 @@
 package blah;
 
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.Random;
 
+import org.bouncycastle.math.ec.ECCurve;
 import org.bouncycastle.math.ec.ECPoint;
 
 import zero_knowledge_proofs.CryptoData.BigIntData;
@@ -11,27 +16,22 @@ import zero_knowledge_proofs.CryptoData.CryptoData;
 import zero_knowledge_proofs.CryptoData.CryptoDataArray;
 import zero_knowledge_proofs.CryptoData.ECPointData;
 
-public class AdditiveElgamalCiphertext extends AdditiveCiphertext {
+public class AdditiveElgamalCiphertext extends AdditiveCiphertext implements Externalizable  {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 508970794714992682L;
 
-	private transient ECPoint cipher;
-	private byte[] rawCipher;
-	
-	private transient ECPoint ephemeral;
-	private byte[] rawEphemeral;
+	private ECPoint cipher;
+	private ECPoint ephemeral;
 	private AdditiveElgamalPubKey pub;
-	
-	public AdditiveElgamalCiphertext(ECPoint ecPoint, ECPoint ephemeral, AdditiveElgamalPubKey pub) {
-		this.cipher = ecPoint;
-		this.rawCipher = ephemeral.getEncoded(true);
-		
+
+	public AdditiveElgamalCiphertext() {
+	}
+	public AdditiveElgamalCiphertext(ECPoint cipher, ECPoint ephemeral, AdditiveElgamalPubKey pub) {
+		this.cipher = cipher;
 		this.ephemeral = ephemeral;
-		this.rawEphemeral = ephemeral.getEncoded(true);
-		
 		this.pub = pub;
 	}
 	@Override
@@ -71,7 +71,7 @@ public class AdditiveElgamalCiphertext extends AdditiveCiphertext {
 
 		CryptoData[] toReturn = new CryptoData[3];
 		ECPoint cipher = (ECPoint) this.scalarAdd(message.negate()).getCipher();
-		toReturn[0] = new CryptoDataArray(new CryptoData[] {new ECPointData(cipher)});
+		toReturn[0] = new CryptoDataArray(new CryptoData[] {new ECPointData(this.ephemeral), new ECPointData(cipher)});
 		CryptoData[] secrets;
 		if(ephemeral == null) {
 			secrets = new CryptoData[1];
@@ -88,7 +88,6 @@ public class AdditiveElgamalCiphertext extends AdditiveCiphertext {
 
 	@Override
 	public Object getCipher() {
-		// TODO Auto-generated method stub
 		return cipher;
 	}
 
@@ -117,20 +116,20 @@ public class AdditiveElgamalCiphertext extends AdditiveCiphertext {
 	public CryptoData[] getEncryptionVerifierData(BigInteger message) {
 		CryptoData[] toReturn = new CryptoData[2];
 		ECPoint cipher = (ECPoint) this.scalarAdd(message.negate()).getCipher();
-		toReturn[0] = new CryptoDataArray(new CryptoData[] {new ECPointData(cipher)});
+		toReturn[0] = new CryptoDataArray(new CryptoData[] {new ECPointData(this.ephemeral), new ECPointData(cipher)});
 		toReturn[1] = pub.getZKZeroEnvironment();
 		return toReturn;
 	}
 	@Override
 	public CryptoData[] getRerandomizationProverData(AdditiveCiphertext original, BigInteger ephemeral,
 			SecureRandom rand) {
-		// TODO Auto-generated method stub
-		return null;
+		AdditiveCiphertext proofCipher = this.homomorphicAdd(original.negate());
+		return proofCipher.getEncryptionProverData(BigInteger.ZERO, ephemeral, rand);
 	}
 	@Override
 	public CryptoData[] getRerandomizationVerifierData(AdditiveCiphertext original) {
-		// TODO Auto-generated method stub
-		return null;
+		AdditiveCiphertext proofCipher = this.homomorphicAdd(original.negate());
+		return proofCipher.getEncryptionVerifierData(BigInteger.ZERO);
 	}
 	@Override
 	public BigInteger homomorphicSumEphemeral(BigInteger[] ephemerals) {
@@ -151,6 +150,47 @@ public class AdditiveElgamalCiphertext extends AdditiveCiphertext {
 	@Override
 	public BigInteger scalarMultiplyEphemeral(BigInteger toMultiply, BigInteger ephemeral) {
 		return ephemeral.multiply(toMultiply);
+	}
+	@Override
+	public void writeExternal(ObjectOutput out) throws IOException {
+		pub.writeExternal(out);
+
+		byte[] cipherBytes = cipher.getEncoded(true);
+		byte[] ephemeralBytes = ephemeral.getEncoded(true);
+		out.writeInt(cipherBytes.length);
+		out.write(cipherBytes);
+		out.writeInt(ephemeralBytes.length);
+		out.write(ephemeralBytes);
+	}
+	@Override
+	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+		pub = new AdditiveElgamalPubKey();
+		pub.readExternal(in);
+		ECCurve curve = pub.getCurve();
+
+		int cipherSize = in.readInt();
+		byte[] cipher = new byte[cipherSize];
+		if(in.read(cipher) != cipherSize) {
+			throw new IOException("Bad Serialization");
+		}
+		
+		int ephemeralSize = in.readInt();
+		byte[] ephemeral = new byte[ephemeralSize];
+		if(in.read(ephemeral) != ephemeralSize) {
+			throw new IOException("Bad Serialization");
+		}
+		
+		this.cipher = curve.decodePoint(cipher);
+		this.ephemeral = curve.decodePoint(ephemeral);
+	}
+	@Override
+	public AdditiveCiphertext negate() {
+		return new AdditiveElgamalCiphertext(cipher.negate(), ephemeral.negate(), pub);
+	}
+	@Override
+	public BigInteger negateEphemeral(BigInteger ephemeral) {
+		
+		return ephemeral.negate().mod(pub.getOrder());
 	}
 
 

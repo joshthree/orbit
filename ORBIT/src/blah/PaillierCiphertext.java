@@ -153,6 +153,16 @@ public class PaillierCiphertext extends AdditiveCiphertext{
 		return ephemeral.modPow(toMultiply, paillierPubKey.getN());
 	}
 
+	@Override
+	public AdditiveCiphertext negate() {
+		return new PaillierCiphertext(cipher.modInverse(paillierPubKey.getN2()), paillierPubKey);
+	}
+
+	@Override
+	public BigInteger negateEphemeral(BigInteger ephemeral) {
+		return ephemeral.modInverse(paillierPubKey.getN());
+	}
+
 
 	
 	

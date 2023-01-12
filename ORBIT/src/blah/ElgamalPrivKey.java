@@ -10,7 +10,7 @@ public class ElgamalPrivKey implements Priv_Key {
 	}
 
 	@Override
-	public byte[][] getPrivateKey() {
+	public byte[][] getPrivKey() {
 		// TODO Auto-generated method stub
 		return null;
 	}

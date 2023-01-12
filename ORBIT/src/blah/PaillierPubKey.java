@@ -5,6 +5,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.util.InputMismatchException;
 import java.util.Random;
 
 import zero_knowledge_proofs.PaillierProofOfZero;
@@ -22,6 +23,8 @@ public class PaillierPubKey implements Additive_Pub_Key{
 	transient private BigInteger n2;
 	private BigInteger g;
 	private transient CryptoData envZero;
+	
+	private ZKPProtocol pPoZ = new PaillierProofOfZero();
 	
 	protected PaillierPubKey(BigInteger n, BigInteger n2, BigInteger g) {
 		System.out.println("in key, n = " + n);
@@ -107,7 +110,8 @@ public class PaillierPubKey implements Additive_Pub_Key{
 	}
 	@Override
 	public ZKPProtocol getZKPforProofOfEncryption() {
-		return new PaillierProofOfZero();
+		if (pPoZ == null) new PaillierProofOfZero();
+		return pPoZ;
 	}
 	@Override
 	public CryptoData getZKZeroEnvironment() {
@@ -126,6 +130,18 @@ public class PaillierPubKey implements Additive_Pub_Key{
 		g = (BigInteger) in.readObject();
 		n2 = n.pow(2);
 		
+	}
+	@Override
+	public Additive_Pub_Key combineKeys(Additive_Pub_Key otherKey) {
+		throw new InputMismatchException("Not implemented for Paillier");
+	}
+	@Override
+	public Additive_Pub_Key removeKey(Additive_Pub_Key otherKey) {
+		throw new InputMismatchException("Not implemented for Paillier");
+	}
+	@Override
+	public ZKPProtocol getZKPforRerandomization() {
+		return this.getZKPforProofOfEncryption();
 	}
 	
 }

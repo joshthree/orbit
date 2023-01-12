@@ -42,6 +42,7 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 
 	@Override
 	public EncryptedVote vote(VoterDecision v, SecureRandom rand) {
+		BigInteger order = raceKey.getOrder();
 		SVHNwVoterDecision v2 = (SVHNwVoterDecision)v;
 		int vote = v2.getDecision();
 		BigInteger m;//2^((v-1)*beta)
@@ -61,14 +62,13 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 		for(int i = 0; i < zkpArray.length; i++) {
 			zkpArray[i] = baseProof;
 		}
-		ZKPProtocol fullProof = new ZeroKnowledgeOrProver(zkpArray);
+		ZKPProtocol fullProof = new ZeroKnowledgeOrProver(zkpArray, order);
 		
 		CryptoData[] envUnpacked = new CryptoData[zkpArray.length];
 		CryptoData[] publicUnpacked = new CryptoData[zkpArray.length];
 		CryptoData[] secretsUnpacked = new CryptoData[zkpArray.length + 1];
 		CryptoData[] simulatedChallenges = new CryptoData[zkpArray.length];
 		
-		BigInteger order = raceKey.getOrder();
 		
 		for(int i = 0; i < zkpArray.length; i++) {
 			BigInteger m2;//2^((v-1)*beta)
@@ -82,7 +82,7 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 			if (vote == i) {
 				// True Proof.
 				proofInputs = ciphertext.getEncryptionProverData(m2, ephemeral, rand);
-				simulatedChallenges[i] = new BigIntData(BigInteger.ZERO);
+				simulatedChallenges[i] = new BigIntData(null);
 			}
 			else {
 				// simulated proof
@@ -134,6 +134,7 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 
 	@Override
 	public boolean verify(EncryptedVote phi) {
+		BigInteger order = raceKey.getOrder();
 		SVHNwEncryptedVote phi2 = (SVHNwEncryptedVote) phi;
 		AdditiveCiphertext cipher = (AdditiveCiphertext) phi2.getCiphertext();
 		CryptoData[] transcript = phi2.getProofTranscript();
@@ -168,7 +169,7 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 			zkpArray[i] = baseProof;
 		}
 		
-		ZKPProtocol fullProof = new ZeroKnowledgeOrProver(zkpArray);
+		ZKPProtocol fullProof = new ZeroKnowledgeOrProver(zkpArray, order);
 		
 		try {
 			return fullProof.verifyFiatShamir(publicInputs, transcript[0], transcript[1], env);

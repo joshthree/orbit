@@ -73,9 +73,9 @@ public class PaillierPrivKey implements Additive_Priv_Key{
 	}
 
 	@Override
-	public byte[][] getPrivateKey() {
+	public BigInteger[] getPrivKey() {
 		// TODO Auto-generated method stub
-		return null;
+		return new BigInteger[] {mu, lambda};
 	}
 
 	@Override

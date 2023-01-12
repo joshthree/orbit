@@ -18,7 +18,7 @@ import zero_knowledge_proofs.CryptoData.ECPointData;
 
 public abstract class ZKToolkit {
 	protected static ZKPProtocol schnorr = new ECSchnorrProver();
-	protected static ZKPProtocol bitProof = new ZeroKnowledgeOrProver(new ZKPProtocol[] {schnorr, schnorr});
+//	protected static ZKPProtocol bitProof = new ZeroKnowledgeOrProver(new ZKPProtocol[] {schnorr, schnorr});
 	protected static ZKPProtocol prechosenExponentProver = new ECProofOfPrechosenExponentProver();
 	private static boolean registered = false;
 	public static boolean register()
@@ -246,13 +246,13 @@ public abstract class ZKToolkit {
 		
 		
 		
+		ZKPProtocol bitProof = new ZeroKnowledgeOrProver(new ZKPProtocol[] {schnorr, schnorr}, order);
 		
 		if((mag.equals(diff))) {
 			ECPedersenOwnedBitwiseCommitment bits = VarianceToolkit.ecConvertToBits(m.subtract(min), key, numBits, environment, rand);
 			ECPedersenCommitment[] comms = bits.getComm();
 			BigInteger[] keys = bits.getKeys();
 			CryptoData[] bitComms = new CryptoData[numBits];
-			
 			CryptoData[] proofTranscripts = new CryptoData[numBits];
 		
 			for(int i = 0; i < numBits; i++)
@@ -430,15 +430,16 @@ public abstract class ZKToolkit {
 		ECCurve c;
 		ECPoint g;
 		ECPoint h;
-//		BigInteger order;
+		BigInteger order;
 		
 		{
 			CryptoData[] e = environment.getCryptoDataArray();
 			c = e[0].getECCurveData();
 			g = e[0].getECPointData(c);
 			h = e[1].getECPointData(c);
-//			order = c.getOrder();
+			order = c.getOrder();
 		}
+		ZKPProtocol bitProof = new ZeroKnowledgeOrProver(new ZKPProtocol[] {schnorr, schnorr}, order);
 		CryptoData temp = new CryptoDataArray(new CryptoData[] {new ECCurveData(c, h)});
 		CryptoData revEnv = new CryptoDataArray(new CryptoData[] {temp, temp});
 		BigInteger diff = max.subtract(min);
@@ -531,6 +532,16 @@ public abstract class ZKToolkit {
 			
 		}while(toReturn.compareTo(max) >= 0);
 		return toReturn;
+	}
+	public static BigInteger random(BigInteger min, BigInteger max, SecureRandom r) {
+		BigInteger toReturn;
+		if(max.compareTo(min) <= 0) throw new InputMismatchException("Min is greater than Max");
+		BigInteger range = max.subtract(min);
+		do {
+			toReturn = new BigInteger(range.bitLength(), r);
+			
+		}while(toReturn.compareTo(max) >= 0);
+		return toReturn.add(min);
 	}
 	public static ECPoint[] multiCommitment(BigInteger m, BigInteger[] keys, CryptoData environment) {
 		CryptoData[] e = environment.getCryptoDataArray();

@@ -34,16 +34,16 @@ public class AdditiveElgamalPrivKey implements Additive_Priv_Key {
 	}
 
 	@Override
-	public byte[][] getPrivateKey() {
-		// TODO Auto-generated method stub
-		return null;
+	public BigInteger[] getPrivKey() {
+		return new BigInteger[] {privKey};
 	}
 
 	@Override
 	public AdditiveCiphertext decrypt(Ciphertext cipher) {
 		AdditiveElgamalCiphertext cipher2 = (AdditiveElgamalCiphertext) cipher;
 		ECPoint newCipher = ((ECPoint) cipher2.getCipher()).add(cipher2.getEphemeral().multiply(privKey.negate()));
-		return new AdditiveElgamalCiphertext(newCipher, cipher2.getEphemeral(), pub);
+		AdditiveElgamalPubKey newKey = (AdditiveElgamalPubKey) ((AdditiveElgamalPubKey) (cipher.getPub_Key())).removeKey(pub);
+		return new AdditiveElgamalCiphertext(newCipher, cipher2.getEphemeral(), newKey);
 	}
 
 	@Override

@@ -97,7 +97,7 @@ public class PolyLockTester {
 					//				System.out.print((endTime-startTime) + ", ");
 					data[k][0] = (endTime-startTime);
 					startTime = System.nanoTime();
-					ZKPProtocol prover = lock.getProver();
+					ZKPProtocol prover = lock.getProver(order);
 
 
 					CryptoData proverData = lock.buildProverData(environments, rand);
@@ -122,7 +122,7 @@ public class PolyLockTester {
 
 					publicData = lock.buildPublicInputs(environments);
 					env = lock.buildEnvironment(environments);
-					prover = lock.getProver();
+					prover = lock.getProver(order);
 					boolean verify = lock.verifyHiddenValues(new CryptoDataArray(pubKeys).getCryptoDataArray(), environments);
 					if(!verify) {
 						System.out.println("Not my polynomial!");

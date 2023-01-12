@@ -13,6 +13,7 @@ public interface Additive_Pub_Key extends Pub_Key {
 	AdditiveCiphertext encrypt(BigInteger m, SecureRandom rand);
 	
 	ZKPProtocol getZKPforProofOfEncryption();
+	ZKPProtocol getZKPforRerandomization();
 	
 	AdditiveCiphertext encrypt(BigInteger m, BigInteger r);
 	
@@ -22,4 +23,7 @@ public interface Additive_Pub_Key extends Pub_Key {
 	CryptoData getZKZeroEnvironment();
 
 	BigInteger generateEphemeral(SecureRandom rand);
+	
+	Additive_Pub_Key combineKeys(Additive_Pub_Key otherKey);
+	Additive_Pub_Key removeKey(Additive_Pub_Key otherKey);
 }

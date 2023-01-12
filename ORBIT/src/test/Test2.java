@@ -2,6 +2,8 @@ package test;
 
 import java.security.SecureRandom;
 
+import blah.AdditiveElgamalPubKey;
+import blah.Additive_Pub_Key;
 import blah.PaillierPrivKey;
 import blah.PaillierPubKey;
 import election.Election;
@@ -25,13 +27,18 @@ public class Test2 {
 		PaillierPubKey pub = (PaillierPubKey) priv.getPubKey();
 		int bitSeparation = 33;
 		
+		electionTest(numRaces, numCandidates, numVotes, rand, pub, bitSeparation);
+	}
+
+	public static void electionTest(int numRaces, int numCandidates, int numVotes, SecureRandom rand,
+			Additive_Pub_Key pub, int bitSeparation) {
 		Race[] races = new Race[numRaces];
 		
 		for (int i = 0; i < numRaces; i++) {
 			races[i] = new SVHNwRace("", numCandidates, pub, bitSeparation);
 		}
-		
-		Election election = new Election(races, String.format("test election, numCandidates=%d, numRaces=%d", numCandidates, numRaces));
+		AdditiveElgamalPubKey minerKey = null;
+		Election election = new Election(races, String.format("test election, numCandidates=%d, numRaces=%d", numCandidates, numRaces), minerKey);
 		
 		int[][] bdResults = new int[numRaces][numCandidates+1];
 		
@@ -80,8 +87,9 @@ public class Test2 {
 		
 		for (int i = 0; i < numRaces; i++) {
 			for (int j = 0; j < numCandidates; j++) {
-				System.out.println(bdResults[i][j]);
+				System.out.printf("%d, ", bdResults[i][j]);
 			}
+			System.out.println();
 		}
 		
 		System.out.println(start1-start0);

@@ -41,6 +41,8 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 
 	@Override
 	public EncryptedVote vote(VoterDecision v, SecureRandom rand) {
+		BigInteger order = raceKey.getOrder();
+		
 		SVHNwVoterDecisionMulti v2 = (SVHNwVoterDecisionMulti)v;
 		int vote = v2.getDecision();
 		
@@ -77,13 +79,13 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 			CryptoData[] in1;
 			CryptoData simChal = new BigIntData(ZKToolkit.random(raceKey.getOrder(), rand));
 			if(vote != i+1) {	//if this is the vote
-				simChals[0] = new BigIntData(BigInteger.ZERO);
+				simChals[0] = new BigIntData(null);
 				simChals[1] = simChal;
 				in0 = ciphers[i].getEncryptionProverData(BigInteger.ZERO, ephemerals[i], rand);
 				in1 = ciphers[i].getEncryptionProverData(BigInteger.ONE, null, rand);
 			} else {
 				simChals[0] = simChal;
-				simChals[1] = new BigIntData(BigInteger.ZERO);
+				simChals[1] = new BigIntData(null);
 				in0 = ciphers[i].getEncryptionProverData(BigInteger.ZERO, null, rand);
 				in1 = ciphers[i].getEncryptionProverData(BigInteger.ONE, ephemerals[i], rand);
 			}
@@ -115,7 +117,7 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 		//Prove ciphertext combination is one of numCandidates+1 values.		
 		ZKPProtocol[] orsCombined = new ZKPProtocol[numCandidates];
 		for(int i = 0; i < orsCombined.length; i++) {
-			orsCombined[i] = new ZeroKnowledgeOrProver(ors);
+			orsCombined[i] = new ZeroKnowledgeOrProver(ors, order);
 		}
 
 		ZKPProtocol[] zkpArray = new ZKPProtocol[numCandidates+1];
@@ -124,7 +126,7 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 		for(int i = 0; i < zkpArray.length; i++) {
 			zkpArray[i] = baseProof;
 		}
-		ZKPProtocol fullProof = new ZeroKnowledgeAndProver(new ZKPProtocol[] {new ZeroKnowledgeAndProver(orsCombined), new ZeroKnowledgeOrProver(zkpArray)});
+		ZKPProtocol fullProof = new ZeroKnowledgeAndProver(new ZKPProtocol[] {new ZeroKnowledgeAndProver(orsCombined), new ZeroKnowledgeOrProver(zkpArray, order)});
 		
 		
 		CryptoData[] envUnpacked = new CryptoData[zkpArray.length];
@@ -132,7 +134,6 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 		CryptoData[] secretsUnpacked = new CryptoData[zkpArray.length + 1];
 		CryptoData[] simulatedChallenges = new CryptoData[zkpArray.length];
 		
-		BigInteger order = raceKey.getOrder();
 		
 		for(int i = 0; i < zkpArray.length; i++) {
 			BigInteger m2;//2^((v-1)*beta)
@@ -146,7 +147,7 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 			if (vote == i) {
 				// True Proof.
 				proofInputs = ciphertext.getEncryptionProverData(m2, combinedEphemeral, rand);
-				simulatedChallenges[i] = new BigIntData(BigInteger.ZERO);
+				simulatedChallenges[i] = new BigIntData(null);
 			}
 			else {
 				// simulated proof
@@ -202,6 +203,8 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 
 	@Override
 	public boolean verify(EncryptedVote psi) {
+		BigInteger order = raceKey.getOrder();
+		
 		SVHNwEncryptedVoteMulti psi2 = (SVHNwEncryptedVoteMulti) psi;
 		AdditiveCiphertext[] ciphers = (AdditiveCiphertext[]) psi2.getCiphertext();
 		CryptoData[] transcript = psi2.getProofTranscript();
@@ -272,10 +275,10 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 
 		ZKPProtocol[] orsCombined = new ZKPProtocol[numCandidates];
 		for(int i = 0; i < orsCombined.length; i++) {
-			orsCombined[i] = new ZeroKnowledgeOrProver(ors);
+			orsCombined[i] = new ZeroKnowledgeOrProver(ors, order);
 		}
 		
-		ZKPProtocol fullProof = new ZeroKnowledgeAndProver(new ZKPProtocol[] {new ZeroKnowledgeAndProver(orsCombined), new ZeroKnowledgeOrProver(zkpArray)});
+		ZKPProtocol fullProof = new ZeroKnowledgeAndProver(new ZKPProtocol[] {new ZeroKnowledgeAndProver(orsCombined), new ZeroKnowledgeOrProver(zkpArray, order)});
 
 		CryptoData env = new CryptoDataArray(new CryptoData[] {new CryptoDataArray(environmentZeroOrOne), envCombined});
 		CryptoData publicInputs = new CryptoDataArray(new CryptoData[] {new CryptoDataArray(publicInputsZeroOrOne), publicInputsCombined});

@@ -3,6 +3,7 @@ package blah;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.InputMismatchException;
@@ -12,6 +13,8 @@ import org.bouncycastle.math.ec.ECCurve;
 import org.bouncycastle.math.ec.ECCurve.F2m;
 import org.bouncycastle.math.ec.ECPoint;
 
+import zero_knowledge_proofs.ECEqualDiscreteLogsProver;
+import zero_knowledge_proofs.ECProofOfPrechosenExponentProver;
 import zero_knowledge_proofs.ECSchnorrProver;
 import zero_knowledge_proofs.ZKPProtocol;
 import zero_knowledge_proofs.ZKToolkit;
@@ -29,7 +32,10 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 	private static final long serialVersionUID = -7623685611084207477L;
 	private ECPoint g;
 	private ECPoint y;
-	
+	private ZKPProtocol ddhZKP = new ECEqualDiscreteLogsProver();
+	protected AdditiveElgamalPubKey() {
+		g = y = null;
+	}
 	public AdditiveElgamalPubKey(ECPoint g, ECPoint y) {
 		this.g = g;
 		this.y = y;
@@ -37,8 +43,7 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 	
 	@Override
 	public byte[] getPublicKey() {
-		// TODO Auto-generated method stub  return c as byte array
-		return null;
+		return y.getEncoded(true);
 	}
 
 	public ECPoint getG() {
@@ -60,7 +65,8 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 
 	@Override
 	public ZKPProtocol getZKPforProofOfEncryption() {
-		return new ECSchnorrProver();
+		if(ddhZKP == null) ddhZKP = new ECEqualDiscreteLogsProver();
+		return ddhZKP;
 	}
 
 	@Override
@@ -80,7 +86,7 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 
 	@Override
 	public CryptoData getZKZeroEnvironment() {
-		return new CryptoDataArray(new CryptoData[] {new ECCurveData(g.getCurve(), y)});
+		return new CryptoDataArray(new CryptoData[] {new ECCurveData(g.getCurve(), g), new ECPointData(y)});
 	}
 
 	@Override
@@ -94,7 +100,6 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 		
 		out.writeInt(cofactor.length);
 		out.write(cofactor);
-		
 		if(curve instanceof ECCurve.Fp) {
 			out.writeByte(1);
 			ECCurve.Fp curve2 = (ECCurve.Fp) curve;
@@ -144,14 +149,8 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 			}
 		}
 		else {
-			try {
-				out.writeByte(4);
-				out.writeObject(curve.getClass().toString());
-				out.writeObject(curve);
-			}
-			catch(Exception e) {
-				throw new InputMismatchException("Non-supported curve");
-			}
+			out.writeByte(4);
+			out.writeObject(curve.getClass().getName());
 		}
 		
 		byte[] gBytes = g.getEncoded(true);
@@ -233,7 +232,14 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 			curve = new ECCurve.F2m(m, k1, new BigInteger(a), new BigInteger(b), new BigInteger(order), new BigInteger(cofactor));
 		}
 		if(curveType == 4) {
-			curve = (ECCurve) in.readObject();
+			try {
+				Class<?> cls = Class.forName((String) in.readObject());
+				curve = (ECCurve) cls.getConstructors()[0].newInstance(new Object[0]);
+			} catch (Exception e) {
+				System.err.println("gfdjshglfskdjhlkj");
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		else {
 			throw new IOException("Bad Serialization");
@@ -253,6 +259,31 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 		
 		this.g = curve.decodePoint(g);
 		this.y = curve.decodePoint(y);
+	}
+	public ECCurve getCurve() {
+		return g.getCurve();
+	}
+	
+	//Creates a combined pub key that can be decrypted by first decrypting with this's priv, then by decrypting by otherKey's priv (or vice versa)
+	@Override
+	public Additive_Pub_Key combineKeys(Additive_Pub_Key otherKey) {
+		AdditiveElgamalPubKey otherK = (AdditiveElgamalPubKey) otherKey;
+		if (!otherK.getG().equals(g)) {
+			throw new InputMismatchException("Non-matching generators between keys");
+		}
+		return new AdditiveElgamalPubKey(g, y.add(otherK.y));
+	}
+	@Override
+	public Additive_Pub_Key removeKey(Additive_Pub_Key otherKey) {
+		AdditiveElgamalPubKey otherK = (AdditiveElgamalPubKey) otherKey;
+		if (!otherK.getG().equals(g)) {
+			throw new InputMismatchException("Non-matching generators between keys");
+		}
+		return new AdditiveElgamalPubKey(g, y.add(otherK.y.negate()));
+	}
+	@Override
+	public ZKPProtocol getZKPforRerandomization() {
+		return this.getZKPforProofOfEncryption();
 	}
 
 

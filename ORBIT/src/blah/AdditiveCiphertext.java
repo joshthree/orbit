@@ -12,6 +12,8 @@ public abstract class AdditiveCiphertext extends Ciphertext {
 	private static final long serialVersionUID = 4850230256505173129L;
 	
 	
+	public abstract AdditiveCiphertext negate();
+	public abstract BigInteger negateEphemeral(BigInteger ephemeral);
 	
 	public abstract AdditiveCiphertext homomorphicAdd(AdditiveCiphertext toAdd);
 	public abstract BigInteger homomorphicAddEphemeral(BigInteger ephemeral1, BigInteger ephemeral2);

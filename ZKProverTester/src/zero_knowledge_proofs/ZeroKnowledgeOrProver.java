@@ -11,14 +11,16 @@ import zero_knowledge_proofs.CryptoData.CryptoDataArray;
 
 public class ZeroKnowledgeOrProver extends ZKPProtocol{
 	private ZKPProtocol[] p;
+	private BigInteger challengeMod;
 	//private BigInteger[] simulatedChallenges;  //TODO:  Do I want to allow a person to do the proper Zero Knowledge Proof on more than one statement in a ZKP-OR
 	//I currently think not, I will require that the simulatedChallenges array have only one null value.
 	//	private int trueProof; 	//Which proof is being proven
 
 
 
-	public ZeroKnowledgeOrProver(ZKPProtocol[] p) {
+	public ZeroKnowledgeOrProver(ZKPProtocol[] p, BigInteger challengeModulus) {
 		this.p = p.clone();
+		this.challengeMod = challengeModulus;
 	}
 
 
@@ -87,7 +89,7 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 		{
 
 			BigInteger c = simulatedChallenges[j].getBigInt();
-			if(!c.equals(BigInteger.ZERO)) 
+			if(c != null) 
 			{
 				if(i[j] == null)
 					o[j] = null;
@@ -141,7 +143,7 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 		for(int j = 0; j < p.length-1; j++)
 		{
 			BigInteger c = simulatedChallenges[j].getBigInt();
-			if(c.equals(BigInteger.ZERO))
+			if(c == null)
 			{
 				if(trueProofFound)
 				{
@@ -157,7 +159,7 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 					out[j] = null;
 				else
 					out[j] = p[j].initialCommSim(in[j], c, environment[j]);
-				trueChallenge = trueChallenge.xor(c);
+				trueChallenge = trueChallenge.subtract(c).mod(challengeMod);
 			}
 		}
 		if(trueProofFound)
@@ -167,7 +169,7 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 				out[p.length-1] = null;
 			else
 				out[p.length - 1] = p[p.length - 1].initialCommSim(in[p.length-1], c, environment[p.length-1]);
-			trueChallenge = trueChallenge.xor(c);
+			trueChallenge = trueChallenge.subtract(c).mod(challengeMod);
 			simulatedChallenges[trueProof2] = new BigIntData(trueChallenge);
 			if(in[trueProof2] == null)
 				out[trueProof2] = null;
@@ -193,7 +195,7 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 		for(int i = 0; i < p.length; i++)
 		{
 			BigInteger c = simulatedChallenges[i].getBigInt();
-			if(c.equals(BigInteger.ZERO))
+			if(c == null)
 			{
 				if(trueProof != -1) throw new MultipleTrueProofException();
 				trueProof = i;
@@ -205,7 +207,7 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 				else
 					out[i] = p[i].simulatorGetResponse(in[i]);
 
-				trueChallenge = trueChallenge.xor(c);
+				trueChallenge = trueChallenge.subtract(c).mod(challengeMod);
 			}
 		}
 		if(trueProof == -1) throw new NoTrueProofException();
@@ -249,7 +251,7 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 		CryptoData[] z = z_unopened.getCryptoDataArray();
 		CryptoData[] e = environments.getCryptoDataArray();
 		CryptoData[] challenges = z[z.length-1].getCryptoDataArray();
-		BigInteger xoredChallenge = challenge;
+		BigInteger summedChallenge = challenge;
 		//		System.out.println("V:\tin = " + input);
 		//		System.out.println("V:\ta  = " + a_unopened);
 		//		System.out.println("V:\tz  = " + z_unopened);
@@ -259,7 +261,7 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 		for(int i = 0; i < p.length; i++)
 		{ 
 			BigInteger c = challenges[i].getBigInt();
-			xoredChallenge = xoredChallenge.xor(c);
+			summedChallenge = summedChallenge.subtract(c).mod(challengeMod);
 			flag = p[i].verifyResponse(in[i], a[i], z[i], c, e[i]);
 			if(!flag) 
 			{
@@ -268,10 +270,12 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 			}
 //			/**/else System.out.println("OR good on " + i);
 		}
-		if(xoredChallenge.equals(BigInteger.ZERO) == false)
+		if(!summedChallenge.equals(BigInteger.ZERO))
 		{	
 			System.out.println("Bad Challenge in OR");
+			System.out.println(challengeMod);
 			System.out.println(Arrays.toString(challenges));
+			
 
 			System.out.println(challenge);
 			toReturn =  false;
@@ -320,7 +324,7 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 		{
 
 			BigInteger c = simulatedChallenges[j].getBigInt();
-			if(!c.equals(BigInteger.ZERO)) 
+			if(c != null) 
 			{
 				if(i[j] == null)
 					o[j] = null;
@@ -369,7 +373,7 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 		for(int j = 0; j < p.length-1; j++)
 		{
 			BigInteger c = simulatedChallenges[j].getBigInt();
-			if(c.equals(BigInteger.ZERO))
+			if(c == null)
 			{
 				if(trueProofFound)
 				{
@@ -385,7 +389,7 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 					out[j] = null;
 				else
 					out[j] = p[j].initialCommSim(in[j], s[j], c, e[j]);
-				trueChallenge = trueChallenge.xor(c);
+				trueChallenge = trueChallenge.subtract(c).mod(challengeMod);
 			}
 		}
 		if(trueProofFound)
@@ -395,7 +399,7 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 				out[p.length-1] = null;
 			else
 				out[p.length - 1] = p[p.length - 1].initialCommSim(in[p.length-1], s[p.length-1], c, e[p.length-1]);
-			trueChallenge = trueChallenge.xor(c);
+			trueChallenge = trueChallenge.subtract(c).mod(challengeMod);
 			simulatedChallenges[trueProof] = new BigIntData(trueChallenge);
 			if(in[trueProof] == null)
 				out[trueProof] = null;
@@ -425,7 +429,7 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 		for(int i = 0; i < p.length; i++)
 		{
 			BigInteger c = simulatedChallenges[i].getBigInt();
-			if(c.equals(BigInteger.ZERO))
+			if(c == null)
 			{
 				if(trueProof != -1) throw new MultipleTrueProofException();
 				trueProof = i;
@@ -437,7 +441,7 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 				else
 					out[i] = p[i].simulatorGetResponse(in[i], s[i]);
 
-				trueChallenge = trueChallenge.xor(c);
+				trueChallenge = trueChallenge.subtract(c).mod(challengeMod);
 			}
 		}
 		if(trueProof == -1) throw new NoTrueProofException();

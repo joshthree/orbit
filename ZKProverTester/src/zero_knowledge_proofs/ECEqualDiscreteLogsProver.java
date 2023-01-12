@@ -10,7 +10,9 @@ import zero_knowledge_proofs.CryptoData.CryptoDataArray;
 
 public class ECEqualDiscreteLogsProver extends ZKPProtocol {
 
-	//input = [y_g, y_h, r, x]
+	//pub = [y_g, y_h]
+	//sec = [rp, x]
+	//env = [g, h]
 	@Override
 	public CryptoData initialComm(CryptoData input, CryptoData environment)
 			throws MultipleTrueProofException, NoTrueProofException, ArraySizesDoNotMatchException {

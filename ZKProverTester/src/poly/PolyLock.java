@@ -260,13 +260,13 @@ public class PolyLock implements PolyLockInterface{
 	}
 
 	@Override
-	public ZKPProtocol getProver() {
+	public ZKPProtocol getProver(BigInteger order) {
 		if(prover != null) return prover;
 		ZKPProtocol schnorr = new ECSchnorrProver();
 		ZKPProtocol[] outer = new ZKPProtocol[2];
 		ZKPProtocol[] middle = new ZKPProtocol[valueCommitments.length];
 		ZKPProtocol sameBit = new ZeroKnowledgeAndProver(new ZKPProtocol[]{schnorr, schnorr});
-		ZKPProtocol inner = new ZeroKnowledgeOrProver(new ZKPProtocol[]{sameBit, sameBit});
+		ZKPProtocol inner = new ZeroKnowledgeOrProver(new ZKPProtocol[]{sameBit, sameBit}, order);
 		for(int i = 0; i < middle.length; i++) {
 			
 			if(needsConversion[i]) {
@@ -390,7 +390,7 @@ public class PolyLock implements PolyLockInterface{
 					
 					
 					if(!ownedValueCommitments[i].message.testBit(j)){
-						innerChallenges[0] = new BigIntData(BigInteger.ZERO);
+						innerChallenges[0] = new BigIntData(null);
 						innerChallenges[1] = new BigIntData(new BigInteger(255, rand));
 						
 						CryptoData[] temp = new CryptoData[2];
@@ -407,7 +407,7 @@ public class PolyLock implements PolyLockInterface{
 					}
 					else{
 						innerChallenges[0] = new BigIntData(new BigInteger(255, rand));
-						innerChallenges[1] = new BigIntData(BigInteger.ZERO);
+						innerChallenges[1] = new BigIntData(null);
 						
 						CryptoData[] temp = new CryptoData[2];
 						
