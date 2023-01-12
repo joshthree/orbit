@@ -41,9 +41,8 @@ public class AdditiveElgamalPrivKey implements Additive_Priv_Key {
 	@Override
 	public AdditiveCiphertext decrypt(Ciphertext cipher) {
 		AdditiveElgamalCiphertext cipher2 = (AdditiveElgamalCiphertext) cipher;
-		ECPoint newCipher = ((ECPoint) cipher2.getCipher()).add(cipher2.getEphemeral().multiply(privKey.negate()));
-		AdditiveElgamalPubKey newKey = (AdditiveElgamalPubKey) ((AdditiveElgamalPubKey) (cipher.getPub_Key())).removeKey(pub);
-		return new AdditiveElgamalCiphertext(newCipher, cipher2.getEphemeral(), newKey);
+		ECPoint newCipher = ((ECPoint) cipher2.getCipher(pub)).add(cipher2.getEphemeral(pub).multiply(privKey.negate()));
+		return new AdditiveElgamalCiphertext(newCipher, cipher2.getEphemeral(pub));
 	}
 
 	@Override

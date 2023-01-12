@@ -1,7 +1,11 @@
 package transactions;
 
+import java.math.BigInteger;
+import java.security.SecureRandom;
+
 import blah.AdditiveElgamalCiphertext;
 import blah.AdditiveElgamalPubKey;
+import blah.Additive_Pub_Key;
 
 public class RegistrationTransaction implements SourceTransaction{
 	private AdditiveElgamalPubKey voterKey;
@@ -9,22 +13,22 @@ public class RegistrationTransaction implements SourceTransaction{
 	private AdditiveElgamalCiphertext dummyFlag;
 	private int position = -1;
 
-	public RegistrationTransaction(AdditiveElgamalPubKey voterKey, AdditiveElgamalPubKey minerKey, AdditiveElgamalCiphertext password) {
+	public RegistrationTransaction(AdditiveElgamalPubKey voterKey, AdditiveElgamalCiphertext password, AdditiveElgamalPubKey minerKey, SecureRandom rand) {
 		this.voterKey = voterKey;
-		dummyFlag = minerKey.encrypt;
-		
+		dummyFlag = (AdditiveElgamalCiphertext) minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO);
+		Additive_Pub_Key origPubKey = voterKey.combineKeys(minerKey);
+		this.password = password;
 	}
 	
 	@Override
 	public AdditiveElgamalCiphertext getPasswordCiphertext() {
-		// TODO Auto-generated method stub
-		return null;
+		return password;
 	}
 
 	@Override
 	public AdditiveElgamalPubKey getVoterPubKey() {
 		// TODO Auto-generated method stub
-		return null;
+		return voterKey;
 	}
 
 	@Override
@@ -42,7 +46,7 @@ public class RegistrationTransaction implements SourceTransaction{
 	@Override
 	public boolean verifyTransaction(ProcessedBlockchain b) {
 		// TODO Auto-generated method stub
-		return false;
+		return true;
 	}
 
 	@Override

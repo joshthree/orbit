@@ -45,7 +45,7 @@ public class PaillierPubKey implements Additive_Pub_Key{
 
 	@Override
 	public AdditiveCiphertext getEmptyCiphertext() {
-		return new PaillierCiphertext(BigInteger.ONE, this);
+		return new PaillierCiphertext(BigInteger.ONE);
 	}
 
 	@Override
@@ -59,7 +59,7 @@ public class PaillierPubKey implements Additive_Pub_Key{
 	
 		BigInteger cipher = g.modPow(m,n2).multiply(r.modPow(n, n2)).mod(n2);
 		
-		return new PaillierCiphertext(cipher, new PaillierPubKey(this));
+		return new PaillierCiphertext(cipher);
 	}
 	
 	@Override 
@@ -90,7 +90,7 @@ public class PaillierPubKey implements Additive_Pub_Key{
 		}
 		
 		BigInteger cipher = g.modPow(m,n2).multiply(r.modPow(n, n2)).mod(n2);
-		return new PaillierCiphertext(cipher, new PaillierPubKey(this));
+		return new PaillierCiphertext(cipher);
 	}
 	@Override
 	public BigInteger getOrder() {

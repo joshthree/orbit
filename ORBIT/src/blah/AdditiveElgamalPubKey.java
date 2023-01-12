@@ -71,7 +71,7 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 
 	@Override
 	public AdditiveCiphertext encrypt(BigInteger m, BigInteger r) {
-		return new AdditiveElgamalCiphertext(g.multiply(m).add(y.multiply(r)), g.multiply(r), this);
+		return new AdditiveElgamalCiphertext(g.multiply(m).add(y.multiply(r)), g.multiply(r));
 	}
 
 	@Override

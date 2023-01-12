@@ -69,13 +69,15 @@ public class BallotTransaction implements Transaction {
 		
 		//Step 3:
 		AdditiveCiphertext origDummy1 = ringMembers[source].getDummyFlag();
-		BigInteger origDummyR1 = ((Additive_Pub_Key) origDummy1.getPub_Key()).generateEphemeral(rand);
-		origDummy2 = ringMembers[source].getPasswordCiphertext().rerandomize(origDummyR1);
+		
+		BigInteger origDummyR1 = minerKey.generateEphemeral(rand);
+		origDummy2 = ringMembers[source].getPasswordCiphertext().rerandomize(origDummyR1, minerKey);
 		
 
+		Additive_Pub_Key origPassPub = minerKey.combineKeys(ringMembers[source].getVoterPubKey());
 		AdditiveCiphertext origPassword1 = ringMembers[source].getPasswordCiphertext();
-		BigInteger origPasswordR1 = ((Additive_Pub_Key) origPassword1.getPub_Key()).generateEphemeral(rand);
-		origPassword2 = ringMembers[source].getPasswordCiphertext().rerandomize(origPasswordR1);
+		BigInteger origPasswordR1 = origPassPub.generateEphemeral(rand);
+		origPassword2 = ringMembers[source].getPasswordCiphertext().rerandomize(origPasswordR1, origPassPub);
 		
 		//Step 4: in arguments
 		
@@ -96,14 +98,14 @@ public class BallotTransaction implements Transaction {
 		byte[] keyImageHash = fastHashDigest.digest(ringMembers[source].getVoterPubKey().getPublicKey());
 		ECCurve curve = minerKey.getCurve();
 		ECPoint g = minerKey.getG();
-		ECPoint h1 = curve.decodePoint(((AdditiveElgamalPubKey) encryptedOldKey.getPub_Key()).getPublicKey());
+		ECPoint h1 = curve.decodePoint(fullPasswordKey.getPublicKey());
 		keyImage = g.multiply(new BigInteger(keyImageHash).mod(minerKey.getOrder())).multiply(sourceVoterPrivKey.add(password).mod(minerKey.getOrder()));
 		//TODO Should be direct Hash to Point, but this will do for now
 		
 		//Step 7:
 		BigInteger passwordRandomizationGamma = fullPasswordKey.generateEphemeral(rand);
-		origPassword2Blinded = origPassword2.scalarMultiply(passwordRandomizationGamma);
-		passwordGuessCipherBlinded = passwordGuessCipher.scalarMultiply(passwordRandomizationGamma);
+		origPassword2Blinded = origPassword2.scalarMultiply(passwordRandomizationGamma, origPassPub);
+		passwordGuessCipherBlinded = passwordGuessCipher.scalarMultiply(passwordRandomizationGamma, fullPasswordKey);
 		
 		//Step 8:
 		blindedPasswordOrigDecrypted = signingKey.decrypt(origPassword2Blinded);
@@ -138,22 +140,23 @@ public class BallotTransaction implements Transaction {
 			
 			ECPoint signingPub = curve.decodePoint(ringMembers[i].getVoterPubKey().getPublicKey());
 			{	
+				Additive_Pub_Key origPassPubRing = minerKey.combineKeys(ringMembers[source].getVoterPubKey());
 				CryptoData[] proofOfMatchingDataInner = new CryptoData[3];
-				AdditiveElgamalCiphertext newCipher = (AdditiveElgamalCiphertext) encryptedOldKey.homomorphicAdd(new AdditiveElgamalCiphertext(signingPub, curve.getInfinity(), (AdditiveElgamalPubKey) encryptedOldKey.getPub_Key()).negate());
-				innerFirstPub[0] = new ECPointData((ECPoint) newCipher.getCipher());
-				innerFirstPub[1] = new ECPointData(newCipher.getEphemeral());
+				AdditiveElgamalCiphertext newCipher = (AdditiveElgamalCiphertext) encryptedOldKey.homomorphicAdd(new AdditiveElgamalCiphertext(signingPub, curve.getInfinity()).negate(origPassPubRing),origPassPubRing);
+				innerFirstPub[0] = new ECPointData((ECPoint) newCipher.getCipher(origPassPubRing));
+				innerFirstPub[1] = new ECPointData(newCipher.getEphemeral(origPassPubRing));
 				CryptoData[] dummyInputs;
 				CryptoData[] passwordInputs;
 				AdditiveCiphertext sourceOrigDummy = ringMembers[i].getDummyFlag();
 				innerFirstSec[0] = new BigIntData(minerKey.generateEphemeral(rand));
 				if(i == source) {
 					innerFirstSec[1] = new BigIntData(sourceVoterPrivKey);
-					dummyInputs = origDummy2.getRerandomizationProverData(ringMembers[i].getDummyFlag(), origDummyR1, rand);
-					passwordInputs = origPassword2.getRerandomizationProverData(ringMembers[i].getPasswordCiphertext(), origPasswordR1, rand);
+					dummyInputs = origDummy2.getRerandomizationProverData(ringMembers[i].getDummyFlag(), origDummyR1, rand, minerKey);
+					passwordInputs = origPassword2.getRerandomizationProverData(ringMembers[i].getPasswordCiphertext(), origPasswordR1, rand, origPassPubRing);
 					simulatedChallenges[i] = minerKey.generateEphemeral(rand);
 				} else {
-					dummyInputs = origDummy2.getRerandomizationProverData(sourceOrigDummy, null, rand);					
-					passwordInputs = origPassword2.getRerandomizationProverData(ringMembers[i].getPasswordCiphertext(), null, rand);
+					dummyInputs = origDummy2.getRerandomizationProverData(sourceOrigDummy, null, rand, minerKey);					
+					passwordInputs = origPassword2.getRerandomizationProverData(ringMembers[i].getPasswordCiphertext(), null, rand, origPassPubRing);
 					simulatedChallenges[i] = null;
 				}
 				
@@ -190,10 +193,10 @@ public class BallotTransaction implements Transaction {
 		
 		ECPoint[] publicForKeyImageProof = new ECPoint[5];
 		publicForKeyImageProof[0] = keyImage;
-		publicForKeyImageProof[1] = (ECPoint) encryptedOldKey.getCipher();
-		publicForKeyImageProof[2] = ((AdditiveElgamalCiphertext) encryptedOldKey).getEphemeral();
-		publicForKeyImageProof[3] = (ECPoint) passwordGuessCipher.getCipher();
-		publicForKeyImageProof[4] = ((AdditiveElgamalCiphertext) passwordGuessCipher).getEphemeral();
+		publicForKeyImageProof[1] = (ECPoint) encryptedOldKey.getCipher(minerKey);
+		publicForKeyImageProof[2] = ((AdditiveElgamalCiphertext) encryptedOldKey).getEphemeral(minerKey);
+		publicForKeyImageProof[3] = (ECPoint) passwordGuessCipher.getCipher(minerKey);
+		publicForKeyImageProof[4] = ((AdditiveElgamalCiphertext) passwordGuessCipher).getEphemeral(minerKey);
 		
 		BigInteger[] secretsForKeyImageProof = new BigInteger[8];
 		for(int i = 0; i < 4; i++) {
@@ -219,10 +222,10 @@ public class BallotTransaction implements Transaction {
 		
 		ECPoint[] publicForPasswordBlinding = new ECPoint[4];
 		
-		publicForPasswordBlinding[0] = (ECPoint) origPassword2Blinded.getCipher();
-		publicForPasswordBlinding[1] = ((AdditiveElgamalCiphertext) origPassword2Blinded).getEphemeral();
-		publicForPasswordBlinding[2] = (ECPoint) passwordGuessCipherBlinded.getCipher();
-		publicForPasswordBlinding[3] = ((AdditiveElgamalCiphertext) passwordGuessCipherBlinded).getEphemeral();
+		publicForPasswordBlinding[0] = (ECPoint) origPassword2Blinded.getCipher(minerKey);
+		publicForPasswordBlinding[1] = ((AdditiveElgamalCiphertext) origPassword2Blinded).getEphemeral(minerKey);
+		publicForPasswordBlinding[2] = (ECPoint) passwordGuessCipherBlinded.getCipher(minerKey);
+		publicForPasswordBlinding[3] = ((AdditiveElgamalCiphertext) passwordGuessCipherBlinded).getEphemeral(minerKey);
 		
 		BigInteger[] secretsForPasswordBlinding = new BigInteger[2];
 		
@@ -231,10 +234,10 @@ public class BallotTransaction implements Transaction {
 
 		CryptoData[] envForPasswordBlinding = new CryptoData[4];
 		
-		envForPasswordBlinding[0] = new ECCurveData(curve, (ECPoint) origPassword2.getCipher());
-		envForPasswordBlinding[1] = new ECPointData(((AdditiveElgamalCiphertext) origPassword2).getEphemeral());
-		envForPasswordBlinding[2] = new ECPointData((ECPoint) passwordGuessCipher.getCipher());
-		envForPasswordBlinding[3] = new ECPointData(((AdditiveElgamalCiphertext) passwordGuessCipher).getEphemeral());
+		envForPasswordBlinding[0] = new ECCurveData(curve, (ECPoint) origPassword2.getCipher(minerKey));
+		envForPasswordBlinding[1] = new ECPointData(((AdditiveElgamalCiphertext) origPassword2).getEphemeral(minerKey));
+		envForPasswordBlinding[2] = new ECPointData((ECPoint) passwordGuessCipher.getCipher(minerKey));
+		envForPasswordBlinding[3] = new ECPointData(((AdditiveElgamalCiphertext) passwordGuessCipher).getEphemeral(minerKey));
 		
 		fullProofDataUnpacked[0][2] = new CryptoDataArray(publicForPasswordBlinding);
 		fullProofDataUnpacked[1][2] = new CryptoDataArray(secretsForPasswordBlinding);
@@ -242,10 +245,10 @@ public class BallotTransaction implements Transaction {
 		
 		ECPoint[] publicForOrigDecrypt = new ECPoint[3];
 		
-		AdditiveElgamalCiphertext diff1 = (AdditiveElgamalCiphertext) origPassword2Blinded.homomorphicAdd(blindedPasswordOrigDecrypted.negate());
-		publicForOrigDecrypt[0] = (ECPoint) diff1.getCipher();
-		publicForOrigDecrypt[1] = (ECPoint) encryptedOldKey.getCipher();
-		publicForOrigDecrypt[2] = ((AdditiveElgamalCiphertext) encryptedOldKey).getEphemeral();
+		AdditiveElgamalCiphertext diff1 = (AdditiveElgamalCiphertext) origPassword2Blinded.homomorphicAdd(blindedPasswordOrigDecrypted.negate(minerKey), minerKey);
+		publicForOrigDecrypt[0] = (ECPoint) diff1.getCipher(minerKey);
+		publicForOrigDecrypt[1] = (ECPoint) encryptedOldKey.getCipher(minerKey);
+		publicForOrigDecrypt[2] = ((AdditiveElgamalCiphertext) encryptedOldKey).getEphemeral(minerKey);
 		
 		BigInteger[] secretsForOrigDecrypt = new BigInteger[4];
 
@@ -257,7 +260,7 @@ public class BallotTransaction implements Transaction {
 
 		CryptoData[] envForOrigDecrypt = new CryptoData[3];
 		
-		envForOrigDecrypt[0] = new ECCurveData(curve, ((AdditiveElgamalCiphertext) origPassword2Blinded).getEphemeral());
+		envForOrigDecrypt[0] = new ECCurveData(curve, ((AdditiveElgamalCiphertext) origPassword2Blinded).getEphemeral(minerKey));
 		envForOrigDecrypt[1] = new ECPointData(g);
 		envForOrigDecrypt[2] = new ECPointData(((AdditiveElgamalPubKey) fullPasswordKey).getY());
 
@@ -269,10 +272,10 @@ public class BallotTransaction implements Transaction {
 		
 		ECPoint[] publicForGuessDecrypt = new ECPoint[2];
 		
-		AdditiveElgamalCiphertext diff2 = (AdditiveElgamalCiphertext) passwordGuessCipherBlinded.homomorphicAdd(blindedPasswordGuessDecrypted.negate());
+		AdditiveElgamalCiphertext diff2 = (AdditiveElgamalCiphertext) passwordGuessCipherBlinded.homomorphicAdd(blindedPasswordGuessDecrypted.negate(minerKey), minerKey);
 		
-		publicForGuessDecrypt[0] = (ECPoint) diff2.getCipher();
-		publicForGuessDecrypt[1] = ((AdditiveElgamalCiphertext) passwordGuessCipherBlinded).getEphemeral();
+		publicForGuessDecrypt[0] = (ECPoint) diff2.getCipher(minerKey);
+		publicForGuessDecrypt[1] = ((AdditiveElgamalCiphertext) passwordGuessCipherBlinded).getEphemeral(minerKey);
 		
 		BigInteger[] secretsForGuessDecrypt = new BigInteger[2];
 

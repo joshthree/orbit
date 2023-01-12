@@ -16,61 +16,88 @@ import zero_knowledge_proofs.CryptoData.CryptoData;
 import zero_knowledge_proofs.CryptoData.CryptoDataArray;
 import zero_knowledge_proofs.CryptoData.ECPointData;
 
-public class AdditiveElgamalCiphertext extends AdditiveCiphertext implements Externalizable  {
+public class AdditiveElgamalCiphertext extends AdditiveCiphertext {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 508970794714992682L;
 
-	private ECPoint cipher;
-	private ECPoint ephemeral;
-	private AdditiveElgamalPubKey pub;
+	private transient ECPoint cipher;
+	private transient ECPoint ephemeral;
+	private byte[] cipherBytes;
+	private byte[] ephemeralBytes;
+	
 
 	public AdditiveElgamalCiphertext() {
 	}
-	public AdditiveElgamalCiphertext(ECPoint cipher, ECPoint ephemeral, AdditiveElgamalPubKey pub) {
+	public AdditiveElgamalCiphertext(ECPoint cipher, ECPoint ephemeral) {
 		this.cipher = cipher;
 		this.ephemeral = ephemeral;
-		this.pub = pub;
+		
+		cipherBytes = cipher.getEncoded(true);
+		ephemeralBytes = ephemeral.getEncoded(true);
 	}
 	@Override
-	public AdditiveCiphertext homomorphicAdd(AdditiveCiphertext toAdd) {
-		
-		return new AdditiveElgamalCiphertext(cipher.add((ECPoint) toAdd.getCipher()), ephemeral.add(((AdditiveElgamalCiphertext) toAdd).getEphemeral()), pub);
+	public AdditiveCiphertext homomorphicAdd(AdditiveCiphertext toAdd, Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
+		return new AdditiveElgamalCiphertext(cipher.add((ECPoint) toAdd.getCipher(pub)), ephemeral.add(((AdditiveElgamalCiphertext) toAdd).getEphemeral(pub)));
 	}
 
-	public ECPoint getEphemeral() {
+	public ECPoint getEphemeral(Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
 		return ephemeral;
 	}
 	@Override
-	public AdditiveCiphertext scalarAdd(BigInteger toAdd) {
-		return new AdditiveElgamalCiphertext(cipher.add(pub.getG().multiply(toAdd)), ephemeral, pub);
+	public AdditiveCiphertext scalarAdd(BigInteger toAdd, Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
+		return new AdditiveElgamalCiphertext(cipher.add(((AdditiveElgamalPubKey) pub).getG().multiply(toAdd)), ephemeral);
 	}
 
 	@Override
-	public AdditiveCiphertext scalarMultiply(BigInteger toMultiply) {
-		return new AdditiveElgamalCiphertext(cipher.multiply(toMultiply), ephemeral.multiply(toMultiply), pub);
+	public AdditiveCiphertext scalarMultiply(BigInteger toMultiply, Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
+		return new AdditiveElgamalCiphertext(cipher.multiply(toMultiply), ephemeral.multiply(toMultiply));
 	}
 
 	@Override
-	public AdditiveCiphertext getEmptyEncryption() {
-		// TODO Auto-generated method stub
-		return pub.encrypt(BigInteger.ZERO, BigInteger.ZERO);
-	}
-
-	@Override
-	protected void mutableAdd(AdditiveCiphertext toAdd) {
-		cipher = cipher.add((ECPoint) toAdd.getCipher());
-		ephemeral = ephemeral.add(((AdditiveElgamalCiphertext) toAdd).getEphemeral());
+	protected void mutableAdd(AdditiveCiphertext toAdd, Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
+		cipher = cipher.add((ECPoint) toAdd.getCipher(pub));
+		ephemeral = ephemeral.add(((AdditiveElgamalCiphertext) toAdd).getEphemeral(pub));
 		
 	}
 
 	@Override
-	public CryptoData[] getEncryptionProverData(BigInteger message, BigInteger ephemeral, SecureRandom rand) {
+	public CryptoData[] getEncryptionProverData(BigInteger message, BigInteger ephemeral, SecureRandom rand, Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
 
 		CryptoData[] toReturn = new CryptoData[3];
-		ECPoint cipher = (ECPoint) this.scalarAdd(message.negate()).getCipher();
+		ECPoint cipher = (ECPoint) this.scalarAdd(message.negate(), pub).getCipher(pub);
 		toReturn[0] = new CryptoDataArray(new CryptoData[] {new ECPointData(this.ephemeral), new ECPointData(cipher)});
 		CryptoData[] secrets;
 		if(ephemeral == null) {
@@ -87,52 +114,86 @@ public class AdditiveElgamalCiphertext extends AdditiveCiphertext implements Ext
 	}
 
 	@Override
-	public Object getCipher() {
+	public Object getCipher(Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
 		return cipher;
 	}
 
 	@Override
-	public BigInteger getValue() {
+	public BigInteger getValue(Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Pub_Key getPub_Key() {
-		// TODO Auto-generated method stub
-		return null;
+	public AdditiveCiphertext rerandomize(SecureRandom rand, Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
+		return rerandomize(((Additive_Pub_Key) pub).generateEphemeral(rand), pub);
 	}
 
 	@Override
-	public AdditiveCiphertext rerandomize(SecureRandom rand) {
-		return rerandomize(pub.generateEphemeral(rand));
+	public AdditiveCiphertext rerandomize(BigInteger ephemeral, Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
+		return homomorphicAdd(((AdditiveElgamalPubKey) pub).encrypt(BigInteger.ZERO, ephemeral), (Additive_Pub_Key) pub);
 	}
-
 	@Override
-	public AdditiveCiphertext rerandomize(BigInteger ephemeral) {
-		return homomorphicAdd(pub.encrypt(BigInteger.ZERO, ephemeral));
-	}
-	@Override
-	public CryptoData[] getEncryptionVerifierData(BigInteger message) {
+	public CryptoData[] getEncryptionVerifierData(BigInteger message, Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
 		CryptoData[] toReturn = new CryptoData[2];
-		ECPoint cipher = (ECPoint) this.scalarAdd(message.negate()).getCipher();
+		ECPoint cipher = (ECPoint) this.scalarAdd(message.negate(),pub).getCipher(pub);
 		toReturn[0] = new CryptoDataArray(new CryptoData[] {new ECPointData(this.ephemeral), new ECPointData(cipher)});
 		toReturn[1] = pub.getZKZeroEnvironment();
 		return toReturn;
 	}
 	@Override
 	public CryptoData[] getRerandomizationProverData(AdditiveCiphertext original, BigInteger ephemeral,
-			SecureRandom rand) {
-		AdditiveCiphertext proofCipher = this.homomorphicAdd(original.negate());
-		return proofCipher.getEncryptionProverData(BigInteger.ZERO, ephemeral, rand);
+			SecureRandom rand, Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
+		AdditiveCiphertext proofCipher = this.homomorphicAdd(original.negate(pub), pub);
+		return proofCipher.getEncryptionProverData(BigInteger.ZERO, ephemeral, rand, pub);
 	}
 	@Override
-	public CryptoData[] getRerandomizationVerifierData(AdditiveCiphertext original) {
-		AdditiveCiphertext proofCipher = this.homomorphicAdd(original.negate());
-		return proofCipher.getEncryptionVerifierData(BigInteger.ZERO);
+	public CryptoData[] getRerandomizationVerifierData(AdditiveCiphertext original, Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
+		AdditiveCiphertext proofCipher = this.homomorphicAdd(original.negate(pub), pub);
+		return proofCipher.getEncryptionVerifierData(BigInteger.ZERO, pub);
 	}
 	@Override
-	public BigInteger homomorphicSumEphemeral(BigInteger[] ephemerals) {
+	public BigInteger homomorphicSumEphemeral(BigInteger[] ephemerals, Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
 		BigInteger toReturn = ephemerals[0];
 		for(int i = 1; i < ephemerals.length; i++) {
 			toReturn = toReturn.add(ephemerals[i]).mod(pub.getOrder());
@@ -140,58 +201,76 @@ public class AdditiveElgamalCiphertext extends AdditiveCiphertext implements Ext
 		return toReturn;
 	}
 	@Override
-	public BigInteger homomorphicAddEphemeral(BigInteger ephemeral1, BigInteger ephemeral2) {
+	public BigInteger homomorphicAddEphemeral(BigInteger ephemeral1, BigInteger ephemeral2, Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
 		return ephemeral1.add(ephemeral2);
 	}
 	@Override
-	public BigInteger scalarAddEphemeral(BigInteger toAdd, BigInteger ephemeral) {
+	public BigInteger scalarAddEphemeral(BigInteger toAdd, BigInteger ephemeral, Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
 		return ephemeral;
 	}
 	@Override
-	public BigInteger scalarMultiplyEphemeral(BigInteger toMultiply, BigInteger ephemeral) {
+	public BigInteger scalarMultiplyEphemeral(BigInteger toMultiply, BigInteger ephemeral, Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
+		}
 		return ephemeral.multiply(toMultiply);
 	}
+//	@Override
+//	public void writeExternal(ObjectOutput out) throws IOException {
+//		byte[] cipherBytes = cipher.getEncoded(true);
+//		byte[] ephemeralBytes = ephemeral.getEncoded(true);
+//		out.writeInt(cipherBytes.length);
+//		out.write(cipherBytes);
+//		out.writeInt(ephemeralBytes.length);
+//		out.write(ephemeralBytes);
+//	}
+//	@Override
+//	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+//		int cipherSize = in.readInt();
+//		byte[] cipher = new byte[cipherSize];
+//		if(in.read(cipher) != cipherSize) {
+//			throw new IOException("Bad Serialization");
+//		}
+//		
+//		int ephemeralSize = in.readInt();
+//		byte[] ephemeral = new byte[ephemeralSize];
+//		if(in.read(ephemeral) != ephemeralSize) {
+//			throw new IOException("Bad Serialization");
+//		}
+//		
+//		this.cipher = curve.decodePoint(cipher);
+//		this.ephemeral = curve.decodePoint(ephemeral);
+//	}
 	@Override
-	public void writeExternal(ObjectOutput out) throws IOException {
-		pub.writeExternal(out);
-
-		byte[] cipherBytes = cipher.getEncoded(true);
-		byte[] ephemeralBytes = ephemeral.getEncoded(true);
-		out.writeInt(cipherBytes.length);
-		out.write(cipherBytes);
-		out.writeInt(ephemeralBytes.length);
-		out.write(ephemeralBytes);
-	}
-	@Override
-	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-		pub = new AdditiveElgamalPubKey();
-		pub.readExternal(in);
-		ECCurve curve = pub.getCurve();
-
-		int cipherSize = in.readInt();
-		byte[] cipher = new byte[cipherSize];
-		if(in.read(cipher) != cipherSize) {
-			throw new IOException("Bad Serialization");
+	public AdditiveCiphertext negate(Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
 		}
-		
-		int ephemeralSize = in.readInt();
-		byte[] ephemeral = new byte[ephemeralSize];
-		if(in.read(ephemeral) != ephemeralSize) {
-			throw new IOException("Bad Serialization");
+		return new AdditiveElgamalCiphertext(cipher.negate(), ephemeral.negate());
+	}
+	@Override
+	public BigInteger negateEphemeral(BigInteger ephemeral, Additive_Pub_Key pub) {
+		if(cipher == null) {
+			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
+			this.cipher = curve.decodePoint(cipherBytes);
+			this.ephemeral = curve.decodePoint(ephemeralBytes);
 		}
-		
-		this.cipher = curve.decodePoint(cipher);
-		this.ephemeral = curve.decodePoint(ephemeral);
-	}
-	@Override
-	public AdditiveCiphertext negate() {
-		return new AdditiveElgamalCiphertext(cipher.negate(), ephemeral.negate(), pub);
-	}
-	@Override
-	public BigInteger negateEphemeral(BigInteger ephemeral) {
 		
 		return ephemeral.negate().mod(pub.getOrder());
 	}
-
 
 }

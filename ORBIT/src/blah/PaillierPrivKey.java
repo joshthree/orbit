@@ -84,11 +84,8 @@ public class PaillierPrivKey implements Additive_Priv_Key{
 	}
 	@Override
 	public AdditiveCiphertext decrypt(Ciphertext c) {
-		if(!pubKey.equals(c.getPub_Key())) {
-			throw new InputMismatchException("Mismatched Keys");
-		}
 		PaillierCiphertext cipher = (PaillierCiphertext) c;	
-		return new PaillierCiphertext((lFunction(cipher.getCipher().modPow(lambda,n2), n).multiply(mu)).mod(n), null);
+		return new PaillierCiphertext((lFunction(cipher.getCipher(pubKey).modPow(lambda,n2), n).multiply(mu)).mod(n));
 	}
 	@Override
 	public AdditiveCiphertext partialGroupDecrypt(Ciphertext c, Channel[] channels) {

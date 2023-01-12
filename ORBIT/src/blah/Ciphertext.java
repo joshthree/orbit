@@ -12,13 +12,8 @@ public abstract class Ciphertext implements Serializable {
 	 */
 	private static final long serialVersionUID = -8437241215736240995L;
 
-	public abstract Object getCipher();
+	public abstract Object getCipher(Pub_Key pub);
 
-	public abstract BigInteger getValue();
+	public abstract BigInteger getValue(Pub_Key pub);
 	
-	public abstract Pub_Key getPub_Key();
-	
-
-	public abstract Ciphertext rerandomize(BigInteger r);
-	public abstract Ciphertext rerandomize(SecureRandom rand);
 }

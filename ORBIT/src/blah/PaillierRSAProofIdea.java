@@ -38,11 +38,11 @@ public class PaillierRSAProofIdea {
 				paillierCCurr = pub.encrypt(BigInteger.ONE, rand); 
 			}
 			else {
-				paillierCCurr = paillierCCurr.scalarMultiply(mCurr).homomorphicAdd(pub.encrypt(BigInteger.ZERO, rand));
+				paillierCCurr = paillierCCurr.scalarMultiply(mCurr, pub).homomorphicAdd(pub.encrypt(BigInteger.ZERO, rand),pub);
 				mCurr = mCurr.modPow(BigInteger.valueOf(2), n);
 			}
 			if(e.testBit(i)) { //if the ith bit is a 1
-				paillierCCurr = paillierCCurr.scalarMultiply(m).homomorphicAdd(pub.encrypt(BigInteger.ZERO, rand));
+				paillierCCurr = paillierCCurr.scalarMultiply(m, pub).homomorphicAdd(pub.encrypt(BigInteger.ZERO, rand),pub);
 				mCurr = mCurr.multiply(m).mod(n);
 			}
 
@@ -50,9 +50,9 @@ public class PaillierRSAProofIdea {
 		System.out.println("mCurr = " + mCurr);
 		System.out.println("m = " + m);
 		System.out.println(rsaC);
-		BigInteger blah = priv.decrypt(paillierCCurr).getValue();
+		BigInteger blah = priv.decrypt(paillierCCurr).getValue(pub);
 		if(n.compareTo(rsaC) <= 0) System.out.println("huh RSA");
-		System.out.println(priv.decrypt(paillierCCurr).getValue());
+		System.out.println(priv.decrypt(paillierCCurr).getValue(pub));
 		System.out.println("n = " + n);
 		if(n.compareTo(blah) <= 0) System.out.println("huh Paillier");
 		

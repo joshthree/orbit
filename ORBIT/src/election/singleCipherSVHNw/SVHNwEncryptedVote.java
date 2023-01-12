@@ -28,16 +28,16 @@ public class SVHNwEncryptedVote implements EncryptedVote {
 	}
 
 	@Override
-	public EncryptedVote rerandomize(SecureRandom rand) {
-		BigInteger r = ((Additive_Pub_Key) (cipher.getPub_Key())).generateEphemeral(rand);
-		return rerandomize(new BigInteger[] {r});
+	public EncryptedVote rerandomize(SecureRandom rand, Additive_Pub_Key raceKey) {
+		BigInteger r = raceKey.generateEphemeral(rand);
+		return rerandomize(new BigInteger[] {r}, raceKey);
 	}
 
 	@Override
-	public EncryptedVote rerandomize(BigInteger[] r) {
+	public EncryptedVote rerandomize(BigInteger[] r, Additive_Pub_Key raceKey) {
 		
 		//Rerandomize
-		AdditiveCiphertext cipher2 = (AdditiveCiphertext) cipher.rerandomize(r[0]);
+		AdditiveCiphertext cipher2 = (AdditiveCiphertext) cipher.rerandomize(r[0], raceKey);
 		
 		return new SVHNwEncryptedVote(cipher2, null);
 	}

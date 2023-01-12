@@ -81,13 +81,13 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 			if(vote != i+1) {	//if this is the vote
 				simChals[0] = new BigIntData(null);
 				simChals[1] = simChal;
-				in0 = ciphers[i].getEncryptionProverData(BigInteger.ZERO, ephemerals[i], rand);
-				in1 = ciphers[i].getEncryptionProverData(BigInteger.ONE, null, rand);
+				in0 = ciphers[i].getEncryptionProverData(BigInteger.ZERO, ephemerals[i], rand, raceKey);
+				in1 = ciphers[i].getEncryptionProverData(BigInteger.ONE, null, rand, raceKey);
 			} else {
 				simChals[0] = simChal;
 				simChals[1] = new BigIntData(null);
-				in0 = ciphers[i].getEncryptionProverData(BigInteger.ZERO, null, rand);
-				in1 = ciphers[i].getEncryptionProverData(BigInteger.ONE, ephemerals[i], rand);
+				in0 = ciphers[i].getEncryptionProverData(BigInteger.ZERO, null, rand, raceKey);
+				in1 = ciphers[i].getEncryptionProverData(BigInteger.ONE, ephemerals[i], rand, raceKey);
 			}
 			pub[0] = in0[0];
 			pub[1] = in1[0];
@@ -108,10 +108,10 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 		BigInteger combinedEphemeral = ephemerals[0];
 		for(int i = 1; i < ciphers.length; i++) {
 			BigInteger toMultiply = BigInteger.TWO.pow(i*bitSeparation);
-			AdditiveCiphertext tempCipher = ciphers[i].scalarMultiply(BigInteger.TWO.pow(i*bitSeparation));
-			BigInteger tempEphemeral = tempCipher.scalarMultiplyEphemeral(toMultiply, ephemerals[i]);
-			ciphertext = ciphertext.homomorphicAdd(tempCipher);
-			combinedEphemeral = ciphertext.homomorphicAddEphemeral(combinedEphemeral, tempEphemeral);
+			AdditiveCiphertext tempCipher = ciphers[i].scalarMultiply(BigInteger.TWO.pow(i*bitSeparation), raceKey);
+			BigInteger tempEphemeral = tempCipher.scalarMultiplyEphemeral(toMultiply, ephemerals[i], raceKey);
+			ciphertext = ciphertext.homomorphicAdd(tempCipher, raceKey);
+			combinedEphemeral = ciphertext.homomorphicAddEphemeral(combinedEphemeral, tempEphemeral, raceKey);
 		}
 		
 		//Prove ciphertext combination is one of numCandidates+1 values.		
@@ -146,12 +146,12 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 			CryptoData[] proofInputs;
 			if (vote == i) {
 				// True Proof.
-				proofInputs = ciphertext.getEncryptionProverData(m2, combinedEphemeral, rand);
+				proofInputs = ciphertext.getEncryptionProverData(m2, combinedEphemeral, rand, raceKey);
 				simulatedChallenges[i] = new BigIntData(null);
 			}
 			else {
 				// simulated proof
-				proofInputs = ciphertext.getEncryptionProverData(m2, null, rand);
+				proofInputs = ciphertext.getEncryptionProverData(m2, null, rand, raceKey);
 				simulatedChallenges[i] = new BigIntData(ZKToolkit.random(order, rand));
 			}
 			publicUnpacked[i] = proofInputs[0];
@@ -218,8 +218,8 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 			
 			CryptoData[] in0;
 			CryptoData[] in1;
-			in0 = ciphers[i].getEncryptionVerifierData(BigInteger.ZERO);
-			in1 = ciphers[i].getEncryptionVerifierData(BigInteger.ONE);
+			in0 = ciphers[i].getEncryptionVerifierData(BigInteger.ZERO, raceKey);
+			in1 = ciphers[i].getEncryptionVerifierData(BigInteger.ONE, raceKey);
 			
 			pub[0] = in0[0];
 			pub[1] = in1[0];
@@ -238,8 +238,8 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 		AdditiveCiphertext ciphertext = ciphers[0];
 		for(int i = 1; i < ciphers.length; i++) {
 			BigInteger toMultiply = BigInteger.TWO.pow(i*bitSeparation);
-			AdditiveCiphertext tempCipher = ciphers[i].scalarMultiply(BigInteger.TWO.pow(i*bitSeparation));
-			ciphertext = ciphertext.homomorphicAdd(tempCipher);
+			AdditiveCiphertext tempCipher = ciphers[i].scalarMultiply(BigInteger.TWO.pow(i*bitSeparation), raceKey);
+			ciphertext = ciphertext.homomorphicAdd(tempCipher, raceKey);
 		}
 		for(int i = 0; i < numCandidates+1; i++) {
 			BigInteger m2;//2^((v-1)*beta)
@@ -251,7 +251,7 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 			}
 			// True Proof.
 			//Build cryptodata[] for publicInputs
-			CryptoData[] vInputs = ciphertext.getEncryptionVerifierData(m2);
+			CryptoData[] vInputs = ciphertext.getEncryptionVerifierData(m2, raceKey);
 			publicUnpacked[i] = vInputs[0];
 		
 			envUnpacked[i] = vInputs[1];
@@ -318,7 +318,7 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 			ObjectOutputStream[] out, SecureRandom rand) {
 		AdditiveCiphertext bigPsiprime = raceKey.getEmptyCiphertext();
 		for (int i = 0; i < cPsi.size(); i++) {
-			bigPsiprime = bigPsiprime.homomorphicAdd((AdditiveCiphertext)(cPsi.get(i).getCiphertext()));
+			bigPsiprime = bigPsiprime.homomorphicAdd((AdditiveCiphertext)(cPsi.get(i).getCiphertext()), raceKey);
 		}
 		System.out.println("resulting ciphertext ");
 		System.out.println(bigPsiprime);

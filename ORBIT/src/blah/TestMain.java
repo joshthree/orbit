@@ -24,29 +24,29 @@ public class TestMain {
 		AdditiveCiphertext c1 = pub.encrypt(BigInteger.valueOf(6), rand);
 		AdditiveCiphertext c2 = pub.encrypt(BigInteger.valueOf(900), rand);
 
-		AdditiveCiphertext c3 = c1.homomorphicAdd(c2);
-		System.out.println(priv.decrypt(c1).getValue());
-		System.out.println(priv.decrypt(c2).getValue());
-		System.out.println(priv.decrypt(c3).getValue());
+		AdditiveCiphertext c3 = c1.homomorphicAdd(c2,pub);
+		System.out.println(priv.decrypt(c1).getValue(pub));
+		System.out.println(priv.decrypt(c2).getValue(pub));
+		System.out.println(priv.decrypt(c3).getValue(pub));
 		
-		AdditiveCiphertext c4 = AdditiveCiphertext.homomorphicSum(c);
+		AdditiveCiphertext c4 = AdditiveCiphertext.homomorphicSum(c,pub);
 		
 
 		for(int i = 0; i < c.length; i++) {
-			System.out.println(priv.decrypt(c[i]).getValue());
+			System.out.println(priv.decrypt(c[i]).getValue(pub));
 		}
 		System.out.println("hi");
-		System.out.println(priv.decrypt(c4).getValue());
+		System.out.println(priv.decrypt(c4).getValue(pub));
 		
-		AdditiveCiphertext c5 = c1.scalarMultiply(BigInteger.valueOf(10000));
+		AdditiveCiphertext c5 = c1.scalarMultiply(BigInteger.valueOf(10000), pub);
 
-		System.out.println(priv.decrypt(c1).getValue());
-		System.out.println(priv.decrypt(c5).getValue());
+		System.out.println(priv.decrypt(c1).getValue(pub));
+		System.out.println(priv.decrypt(c5).getValue(pub));
 		
 		System.out.println(c1);
-		AdditiveCiphertext c1r = (AdditiveCiphertext) c1.rerandomize(rand);
+		AdditiveCiphertext c1r = (AdditiveCiphertext) c1.rerandomize(rand, pub);
 		System.out.println(c1r);
-		System.out.println(priv.decrypt(c1r).getValue());
+		System.out.println(priv.decrypt(c1r).getValue(pub));
 	}
 
 }

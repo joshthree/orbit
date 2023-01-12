@@ -81,12 +81,12 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 			CryptoData[] proofInputs;
 			if (vote == i) {
 				// True Proof.
-				proofInputs = ciphertext.getEncryptionProverData(m2, ephemeral, rand);
+				proofInputs = ciphertext.getEncryptionProverData(m2, ephemeral, rand, raceKey);
 				simulatedChallenges[i] = new BigIntData(null);
 			}
 			else {
 				// simulated proof
-				proofInputs = ciphertext.getEncryptionProverData(m2, null, rand);
+				proofInputs = ciphertext.getEncryptionProverData(m2, null, rand, raceKey);
 				simulatedChallenges[i] = new BigIntData(ZKToolkit.random(order, rand));
 			}
 			publicUnpacked[i] = proofInputs[0];
@@ -152,7 +152,7 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 			}
 			// True Proof.
 			//Build cryptodata[] for publicInputs
-			CryptoData[] vInputs = cipher.getEncryptionVerifierData(m2);
+			CryptoData[] vInputs = cipher.getEncryptionVerifierData(m2, raceKey);
 			publicUnpacked[i] = vInputs[0];
 		
 			envUnpacked[i] = vInputs[1];
@@ -204,7 +204,7 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 			ObjectOutputStream[] out, SecureRandom rand) {
 		AdditiveCiphertext bigPsiprime = raceKey.getEmptyCiphertext();
 		for (int i = 0; i < cPsi.size(); i++) {
-			bigPsiprime = bigPsiprime.homomorphicAdd((AdditiveCiphertext)(cPsi.get(i).getCiphertext()));
+			bigPsiprime = bigPsiprime.homomorphicAdd((AdditiveCiphertext)(cPsi.get(i).getCiphertext()), raceKey);
 		}
 		System.out.println("resulting ciphertext ");
 		System.out.println(bigPsiprime);

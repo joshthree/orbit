@@ -6,9 +6,7 @@ import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.Random;
 
-public interface Pub_Key extends Externalizable {
-	byte[] getPublicKey();
-	
+public interface Pub_Key extends Externalizable {	
 	Ciphertext getEmptyCiphertext();
 	Ciphertext encrypt(BigInteger m, SecureRandom rand);
 	
