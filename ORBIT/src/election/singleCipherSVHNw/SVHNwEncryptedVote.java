@@ -56,7 +56,12 @@ public class SVHNwEncryptedVote implements EncryptedVote {
 		byte[][] toReturn = new byte[1 + transcript.length][];
 		toReturn[0] = cipher.getBytes();
 		for(int i = 0; i < transcript.length; i++) {
-			toReturn[i+1] = transcript[i].getBytes();
+			try {
+				toReturn[i+1] = transcript[i].getBytes();
+			} catch (Exception e) {
+				System.err.println("Outside:  i = " + i);
+				throw e;
+			}
 		}
 		return Arrays.concatenate(toReturn);
 	}

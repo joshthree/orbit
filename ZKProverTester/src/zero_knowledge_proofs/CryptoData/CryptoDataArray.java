@@ -14,14 +14,14 @@ public class CryptoDataArray extends CryptoData {
 	private static final long serialVersionUID = -664917513934888003L;
 	private CryptoData[] data;
 	private LinkedList<Integer> nulls = null;
-	
+
 	@Override
 	public int getFirstNullIndex()
 	{
 		if(nulls == null) return -1;
 		return nulls.get(0);
 	}
-	
+
 	public CryptoDataArray(CryptoData[] data)
 	{
 		super();
@@ -53,7 +53,7 @@ public class CryptoDataArray extends CryptoData {
 			else
 				this.data[i] = new BigIntData(data[i]);
 		}
-		
+
 	}
 	public CryptoDataArray(ECPoint[] data)
 	{
@@ -70,7 +70,7 @@ public class CryptoDataArray extends CryptoData {
 				this.data[i] = new ECPointData(data[i]);
 		}
 	}
-	
+
 	@Override
 	public CryptoData getEmbeddedCryptoData(int[] index, int pos)
 	{
@@ -80,7 +80,7 @@ public class CryptoDataArray extends CryptoData {
 		}
 		return data[index[pos]].getEmbeddedCryptoData(index, pos + 1);
 	}
-	
+
 	@Override
 	public void addFillDataHole(CryptoData d)
 	{
@@ -102,30 +102,30 @@ public class CryptoDataArray extends CryptoData {
 			}
 		}
 	}
-	
-//	@Override
-//	public int addToEmbeddedCryptoData(int[] index, int pos, CryptoData d)
-//	{
-//		if(pos == index.length - 1)
-//		{
-//			int toReturn = 0;
-//			if(data[index[pos]] == null) toReturn = 1;
-//			data[index[pos]] = d;
-//			return toReturn;
-//		}
-//		return data[index[pos]].addToEmbeddedCryptoData(index, pos + 1, d);
-//	}
-//	
-//	@Override
-//	public void replaceEmbeddedCryptoData(int[] index, int pos, CryptoData d)
-//	{
-//		if(pos == index.length - 1)
-//		{
-//			data[index[pos]] = d;
-//		}
-//		else data[index[pos]].addToEmbeddedCryptoData(index, pos + 1, d);
-//	}
-	
+
+	//	@Override
+	//	public int addToEmbeddedCryptoData(int[] index, int pos, CryptoData d)
+	//	{
+	//		if(pos == index.length - 1)
+	//		{
+	//			int toReturn = 0;
+	//			if(data[index[pos]] == null) toReturn = 1;
+	//			data[index[pos]] = d;
+	//			return toReturn;
+	//		}
+	//		return data[index[pos]].addToEmbeddedCryptoData(index, pos + 1, d);
+	//	}
+	//	
+	//	@Override
+	//	public void replaceEmbeddedCryptoData(int[] index, int pos, CryptoData d)
+	//	{
+	//		if(pos == index.length - 1)
+	//		{
+	//			data[index[pos]] = d;
+	//		}
+	//		else data[index[pos]].addToEmbeddedCryptoData(index, pos + 1, d);
+	//	}
+
 	@Override
 	public CryptoData[] getCryptoDataArray() {
 		return data;
@@ -136,7 +136,7 @@ public class CryptoDataArray extends CryptoData {
 		// TODO Auto-generated method stub
 		return data.length;
 	}
-	
+
 	@Override
 	public String toString()
 	{
@@ -178,12 +178,19 @@ public class CryptoDataArray extends CryptoData {
 		byte[][] collectedBits = new byte[data.length][];
 		for(int i = 0; i < data.length; i++)
 		{
-			collectedBits[i] = data[i].getBytes();
+			try {
+				collectedBits[i] = data[i].getBytes();
+			} catch (Exception e) {
+				System.err.println(i);
+				System.err.println(this);
+				throw e;
+			}
+
 		}
-		
+
 		return Arrays.concatenate(collectedBits);
 	}
-	
+
 	@Override
 	public boolean equals(Object o) {
 		boolean toReturn = true;

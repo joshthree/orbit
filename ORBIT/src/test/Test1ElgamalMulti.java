@@ -64,33 +64,27 @@ public class Test1ElgamalMulti {
 				bigPsi2.add(race1.vote(vote[i], rand)); 				
 			}
 		}
+		EncryptedVote[] bigPsi3 = new EncryptedVote[bigPsi2.size()]; 
+		int count = 0;
+		for (int i = 0; i <= numCandidates; i++) {
+			for(int j = 0; j <= i; j++) {
+				bigPsi3[count] = race1.proveVote(bigPsi2.get(count), vote[i], rand); 	
+				count++;
+			}
+		}
 
-		ByteArrayOutputStream outByte = new ByteArrayOutputStream();
-//		EncryptedVote output = null;
-//		try {
-//			ObjectOutputStream out = new ObjectOutputStream(outByte);
-//
-//			out.writeObject(bigPsi2.get(0));
-//			ByteArrayInputStream inByte = new ByteArrayInputStream(outByte.toByteArray());
-//			ObjectInputStream in = new ObjectInputStream(inByte);
-//			output = (EncryptedVote) in.readObject();
-//			bigPsi2.add(output);
-//		} catch (IOException | ClassNotFoundException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
 		long start2 = System.currentTimeMillis();
 		boolean[] verify = new boolean[bigPsi2.size()];
-		for (int i = 0; i < bigPsi2.size(); i++) {
-			System.out.printf("\tVerifying ballot %d:  \n", i);
-			verify[i] = race1.verify(bigPsi2.get(i));
+		for (int i = 0; i < bigPsi3.length; i++) {
+			verify[i] = race1.verify(bigPsi3[i]);
 		}
 
 		long end = System.currentTimeMillis();
 		for (int i = 0; i < bigPsi2.size(); i++) {
 			System.out.printf("verify %d:  %s\n", i, verify[i]);
 		}
-		System.out.println("Voting: " + bigPsi2.size() + "  " + (start2-start1));
+		System.out.println("Voting: " + bigPsi3.length + "  " + (start2-start1));
+	
 
 		System.out.println("Verifying:  " + (end-start2));
 		race1.tally(bigPsi2, priv, null, null, rand);

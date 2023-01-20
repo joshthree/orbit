@@ -46,10 +46,18 @@ public class Test1PaillierMulti {
 			}
 		}
 
+		EncryptedVote[] bigPsi3 = new EncryptedVote[bigPsi2.size()]; 
+		int count = 0;
+		for (int i = 0; i <= numCandidates; i++) {
+			for(int j = 0; j <= i; j++) {
+				bigPsi3[count] = race1.proveVote(bigPsi2.get(count), vote[i], rand); 	
+				count++;
+			}
+		}
 		long start2 = System.currentTimeMillis();
 		boolean[] verify = new boolean[bigPsi2.size()];
-		for (int i = 0; i < bigPsi2.size(); i++) {
-			verify[i] = race1.verify(bigPsi2.get(i));
+		for (int i = 0; i < bigPsi3.length; i++) {
+			verify[i] = race1.verify(bigPsi3[i]);
 		}
 
 		long end = System.currentTimeMillis();

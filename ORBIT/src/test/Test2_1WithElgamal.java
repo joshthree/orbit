@@ -12,7 +12,7 @@ import blah.AdditiveElgamalPrivKey;
 import blah.Additive_Priv_Key;
 import blah.Additive_Pub_Key;
 
-public class Test3WithElgamal {
+public class Test2_1WithElgamal {
 	public static void main(String arg[]) {
 		ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("secp256k1");
 		int numRaces = 5;
@@ -32,6 +32,6 @@ public class Test3WithElgamal {
 		Additive_Pub_Key pub = priv.getPubKey();
 		int bitSeparation = 33;
 		
-		Test3.electionTest(numRaces, numCandidates, numVotes, miners, ringSize, rand, pub, bitSeparation);
+		Test2_1.electionTest(numRaces, numCandidates, numVotes, miners, ringSize, rand, pub, bitSeparation);
 	}
 }

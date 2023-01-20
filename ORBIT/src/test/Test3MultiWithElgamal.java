@@ -21,7 +21,7 @@ public class Test3MultiWithElgamal {
 		int numCandidates = 4;
 		int numVotes = 50;
 		int miners = 10;
-		
+		int ringSize = 15;
 		
 		ECCurve c = spec.getCurve();
 		ECPoint g = spec.getG();
@@ -49,7 +49,7 @@ public class Test3MultiWithElgamal {
 		Additive_Pub_Key pub = priv.getPubKey();
 		int bitSeparation = 33;
 		
-		Test3Multi.electionTest(numRaces, numCandidates, numVotes, miners, rand, pub, bitSeparation);
+		Test3Multi.electionTest(numRaces, numCandidates, numVotes, miners, ringSize, rand, pub, bitSeparation);
 		
 	}
 }

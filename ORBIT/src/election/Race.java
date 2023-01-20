@@ -13,6 +13,7 @@ import blah.Additive_Pub_Key;
 public interface Race extends Serializable{
 	//voter runs this function to create a vote in this race
 	public EncryptedVote vote(VoterDecision v, SecureRandom rand);
+	public EncryptedVote proveVote(EncryptedVote unprovenVote, VoterDecision v, SecureRandom rand);
 	
 	//anyone public runs this function to verify a vote is valid
 	public boolean verify(EncryptedVote phi);

@@ -12,12 +12,13 @@ import election.Race;
 import election.VoterDecision;
 import election.multiCipherSVHNw.SVHNwRaceMulti;
 import election.multiCipherSVHNw.SVHNwVoterDecisionMulti;
+import election.singleCipherSVHNw.SVHNwVoterDecision;
 
 public class Test2Multi {
 	public static void main(String arg[]) {
 		int numRaces = 5;
 		int numCandidates = 4;
-		int numVotes = 50;
+		int numVotes = 10;
 		
 		//SecureRandom rand = new SecureRandom("fhdjkghqeriupgyqhkdlvdjchlzvkcjxvbfiuhagperidfhgkhfdspogieqrjl".getBytes());
 		SecureRandom rand = new SecureRandom();
@@ -45,16 +46,15 @@ public class Test2Multi {
 		EncryptedVote[][] encryptedVotes = new EncryptedVote[numVotes][];
 		
 		long start0 = System.currentTimeMillis();
-		
+		VoterDecision[][] voterDecisions = new VoterDecision[numVotes][numRaces];
 		for (int i = 0; i < numVotes; i++) {
 			//Create VoterDecision array
 			
-			VoterDecision[] voterDecisions = new VoterDecision[numRaces];
 			
 			for (int j = 0; j < numRaces; j++) {
 				//Fill the array with random votes
 				int vote = rand.nextInt(numCandidates+1);
-				voterDecisions[j] = new SVHNwVoterDecisionMulti(vote);
+				voterDecisions[i][j] = new SVHNwVoterDecisionMulti(vote);
 				
 				//Update bdResults//Update bdResults
 				bdResults[j][vote]++; 
@@ -63,11 +63,14 @@ public class Test2Multi {
 				
 			}
 			//Run vote function with the array.
-			encryptedVotes[i] = election.vote(voterDecisions, rand);
+			encryptedVotes[i] = election.vote(voterDecisions[i], rand);
 		}
 		
 		long start1 = System.currentTimeMillis();
-		
+		for (int i = 0; i < numVotes; i++) {
+			encryptedVotes[i] = election.proveVote(encryptedVotes[i], voterDecisions[i], rand);
+		}
+		long start2 = System.currentTimeMillis();
 		
 		boolean verified = true;
 		
@@ -79,11 +82,12 @@ public class Test2Multi {
 			
 		}
 		
+		
 		if (verified) {
 			System.out.println("All good");
 		}
 		
-		long start2 = System.currentTimeMillis();
+		long start3 = System.currentTimeMillis();
 		
 		for (int i = 0; i < numRaces; i++) {
 			for (int j = 0; j < numCandidates; j++) {
@@ -91,9 +95,8 @@ public class Test2Multi {
 			}
 			System.out.println();
 		}
-		
-		System.out.println(start1-start0);
-		System.out.println(start2-start1);
+
+		System.out.printf("%d, %d, %d, ", start1-start0, start2-start1, start3-start2);
 		return encryptedVotes;
 	}
 }

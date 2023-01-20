@@ -59,6 +59,21 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 		}
 		BigInteger ephemeral = raceKey.generateEphemeral(rand);
 		AdditiveCiphertext ciphertext =  raceKey.encrypt(m, ephemeral);
+
+		return new SVHNwEncryptedVote (ciphertext, new CryptoData[] {new BigIntData(ephemeral)});
+	}
+
+
+	@Override
+	public EncryptedVote proveVote(EncryptedVote unprovenVote, VoterDecision v, SecureRandom rand) {
+
+		BigInteger order = raceKey.getOrder();
+		SVHNwVoterDecision v2 = (SVHNwVoterDecision)v;
+		int vote = v2.getDecision();
+		
+		AdditiveCiphertext ciphertext = (AdditiveCiphertext) unprovenVote.getCiphertext();
+		BigInteger ephemeral = unprovenVote.getProofTranscript()[0].getBigInt();
+		
 		
 		ZKPProtocol baseProof = raceKey.getZKPforProofOfEncryption();
 		
@@ -136,7 +151,8 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 		
 		return new SVHNwEncryptedVote (ciphertext, transcripts);
 	}
-
+	
+	
 	@Override
 	public boolean verify(EncryptedVote phi) {
 		BigInteger order = raceKey.getOrder();
@@ -252,6 +268,6 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 		// TODO Auto-generated method stub
 		return new BigInteger[] {raceKey.generateEphemeral(rand)};
 	}
-	
+
 
 }

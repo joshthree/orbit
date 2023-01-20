@@ -62,6 +62,17 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 				ciphers[i] =  raceKey.encrypt(BigInteger.ZERO, ephemerals[i]);
 			}
 		}
+
+		return new SVHNwEncryptedVoteMulti (ciphers, new CryptoDataArray(ephemerals).getCryptoDataArray());
+	}
+	public EncryptedVote proveVote(EncryptedVote unprovenVote, VoterDecision v, SecureRandom rand) {
+		AdditiveCiphertext[] ciphers = (AdditiveCiphertext[]) unprovenVote.getCiphertext();
+		CryptoData[] ephemerals = unprovenVote.getProofTranscript();
+		
+		BigInteger order = raceKey.getOrder();
+		
+		SVHNwVoterDecisionMulti v2 = (SVHNwVoterDecisionMulti)v;
+		int vote = v2.getDecision();
 		int bitSeparation = 2;
 		ZKPProtocol baseProof = raceKey.getZKPforProofOfEncryption();
 		ZKPProtocol[] ors = new ZKPProtocol[] {baseProof, baseProof};
@@ -86,13 +97,13 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 			if(vote != i+1) {	//if this is the vote
 				simChals[0] = new BigIntData(null);
 				simChals[1] = simChal;
-				in0 = ciphers[i].getEncryptionProverData(BigInteger.ZERO, ephemerals[i], rand, raceKey);
+				in0 = ciphers[i].getEncryptionProverData(BigInteger.ZERO, ephemerals[i].getBigInt(), rand, raceKey);
 				in1 = ciphers[i].getEncryptionProverData(BigInteger.ONE, null, rand, raceKey);
 			} else {
 				simChals[0] = simChal;
 				simChals[1] = new BigIntData(null);
 				in0 = ciphers[i].getEncryptionProverData(BigInteger.ZERO, null, rand, raceKey);
-				in1 = ciphers[i].getEncryptionProverData(BigInteger.ONE, ephemerals[i], rand, raceKey);
+				in1 = ciphers[i].getEncryptionProverData(BigInteger.ONE, ephemerals[i].getBigInt(), rand, raceKey);
 			}
 			pub[0] = in0[0];
 			pub[1] = in1[0];
@@ -110,11 +121,11 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 		
 		//Combine ciphertexts
 		AdditiveCiphertext ciphertext = ciphers[0];
-		BigInteger combinedEphemeral = ephemerals[0];
+		BigInteger combinedEphemeral = ephemerals[0].getBigInt();
 		for(int i = 1; i < ciphers.length; i++) {
 			BigInteger toMultiply = BigInteger.TWO.pow(i*bitSeparation);
 			AdditiveCiphertext tempCipher = ciphers[i].scalarMultiply(BigInteger.TWO.pow(i*bitSeparation), raceKey);
-			BigInteger tempEphemeral = tempCipher.scalarMultiplyEphemeral(toMultiply, ephemerals[i], raceKey);
+			BigInteger tempEphemeral = tempCipher.scalarMultiplyEphemeral(toMultiply, ephemerals[i].getBigInt(), raceKey);
 			ciphertext = ciphertext.homomorphicAdd(tempCipher, raceKey);
 			combinedEphemeral = ciphertext.homomorphicAddEphemeral(combinedEphemeral, tempEphemeral, raceKey);
 		}
@@ -202,10 +213,8 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 		//Combine secrets
 		
 		
-		
-		return new SVHNwEncryptedVoteMulti (ciphers, transcripts);
+		return new SVHNwEncryptedVoteMulti(ciphers, transcripts);
 	}
-
 	@Override
 	public boolean verify(EncryptedVote psi) {
 		BigInteger order = raceKey.getOrder();
@@ -321,12 +330,18 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 	@Override
 	public RaceResults tally(ArrayList<EncryptedVote> cPsi, Additive_Priv_Key p, ObjectInputStream[] in,
 			ObjectOutputStream[] out, SecureRandom rand) {
-		AdditiveCiphertext bigPsiprime = raceKey.getEmptyCiphertext();
+		AdditiveCiphertext[] bigPsiPrime = new AdditiveCiphertext[numCandidates];
+		for(int i = 0; i < bigPsiPrime.length; i++) {
+			bigPsiPrime[i] = raceKey.getEmptyCiphertext();
+		}
 		for (int i = 0; i < cPsi.size(); i++) {
-			bigPsiprime = bigPsiprime.homomorphicAdd((AdditiveCiphertext)(cPsi.get(i).getCiphertext()), raceKey);
+			AdditiveCiphertext[] ballotVote = (AdditiveCiphertext[])(cPsi.get(i).getCiphertext());
+			for(int j = 0; j < numCandidates; j++) {
+				bigPsiPrime[j] = bigPsiPrime[j].homomorphicAdd((ballotVote[j]), raceKey);				
+			}
 		}
 		System.out.println("resulting ciphertext ");
-		System.out.println(bigPsiprime);
+		System.out.println(bigPsiPrime);
 		return null;
 	}
 

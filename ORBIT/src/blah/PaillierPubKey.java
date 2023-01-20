@@ -31,7 +31,6 @@ public class PaillierPubKey implements Additive_Pub_Key{
 	private ZKPProtocol pPoZ = new PaillierProofOfZero();
 	
 	protected PaillierPubKey(BigInteger n, BigInteger n2, BigInteger g) {
-		System.out.println("in key, n = " + n);
 		this.n = n;
 		this.n2 = n2;
 		this.g = g;

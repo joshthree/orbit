@@ -37,18 +37,17 @@ import transactions.ProcessedBlockchain;
 import transactions.RegistrationTransaction;
 import transactions.SourceTransaction;
 
-public class Test3 {
-	public static void main2(String arg[]) {
+public class Test2_1 {
+	public static void main(String arg[]) {
 		int numRaces = 5;
 		int numCandidates = 4;
-		int numVotes = 20;
-		int miners = 15;
-		int ringSize = 15;
+		int numVotes = 7;
+		int miners = 10;
+		int ringSize = 5;
 		//SecureRandom rand = new SecureRandom("fhdjkghqeriupgyqhkdlvdjchlzvkcjxvbfiuhagperidfhgkhfdspogieqrjl".getBytes());
 		SecureRandom rand = new SecureRandom();
 		
 		PaillierPrivKey priv = new PaillierPrivKey(2048, rand); 
-		System.out.println(priv);
 		PaillierPubKey pub = (PaillierPubKey) priv.getPubKey();
 		int bitSeparation = 33;
 		
@@ -65,7 +64,7 @@ public class Test3 {
 		Race[] races = new Race[numRaces];
 		
 		for (int i = 0; i < numRaces; i++) {
-			races[i] = new SVHNwRace("", numCandidates, pub, bitSeparation);
+			races[i] = new SVHNwRace("sfgsdf", numCandidates, pub, bitSeparation);
 		}
 		AdditiveElgamalPrivKey[] minerPrivKeys = new AdditiveElgamalPrivKey[miners];
 		AdditiveElgamalPubKey minerKey = new AdditiveElgamalPubKey(g, c.getInfinity());
@@ -134,104 +133,104 @@ public class Test3 {
 //			}
 //			System.out.println();
 //		}
-
+		System.out.printf("%d, %d, %d, ", start1-start0, start2-start1, start3-start2);
 		ProcessedBlockchain blockchain = new ProcessedBlockchain();
-		BallotTransaction[] ballots = Test3.createTransactions(election, encryptedVotes, blockchain, ringSize, rand);
+		BallotTransaction[] ballots = Test2_1.createTransactions(election, encryptedVotes, blockchain, ringSize, rand);
 
 		long start4 = System.currentTimeMillis();
-		System.out.printf("%d, %d, %d, %d \n", start1-start0, start2-start1, start3-start2, start4-start3);
-		ObjectInputStream[][] in = new ObjectInputStream[miners][miners];
-		ObjectOutputStream[][] out = new ObjectOutputStream[miners][miners];
-		AdditiveElgamalPubKey[] individualMinerKeys = new AdditiveElgamalPubKey[minerPrivKeys.length];
-		for(int i = 0; i < miners; i++) {
-			individualMinerKeys[i] = (AdditiveElgamalPubKey) minerPrivKeys[i].getPubKey();
-			for(int j = 0; j < miners; j++) {
-				if(i == j) continue;
-				try {
-					PipedInputStream pIn = new PipedInputStream(3000000);
-					PipedOutputStream pOut = new PipedOutputStream(pIn);
-					out[j][i] = new ObjectOutputStream(pOut);
-					in[i][j] = new ObjectInputStream(pIn);
-					
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		}
-
-		
-//		for(int i = 0; i < in.length; i++) {
-//			for(int j = 0; j < in[i].length; j++) {
-//				if(i == j) {
-//					continue;
-//				}
-//				System.out.printf("Testing %d->%d\n", i, j);
+		System.out.printf("%d \n", start4-start3);
+//		ObjectInputStream[][] in = new ObjectInputStream[miners][miners];
+//		ObjectOutputStream[][] out = new ObjectOutputStream[miners][miners];
+//		AdditiveElgamalPubKey[] individualMinerKeys = new AdditiveElgamalPubKey[minerPrivKeys.length];
+//		for(int i = 0; i < miners; i++) {
+//			individualMinerKeys[i] = (AdditiveElgamalPubKey) minerPrivKeys[i].getPubKey();
+//			for(int j = 0; j < miners; j++) {
+//				if(i == j) continue;
 //				try {
-//					out[i][j].writeInt(4);
-//					int x  = in[j][i].readInt();
+//					PipedInputStream pIn = new PipedInputStream(3000000);
+//					PipedOutputStream pOut = new PipedOutputStream(pIn);
+//					out[j][i] = new ObjectOutputStream(pOut);
+//					in[i][j] = new ObjectInputStream(pIn);
+//					
 //				} catch (IOException e) {
 //					// TODO Auto-generated catch block
 //					e.printStackTrace();
 //				}
-//				
 //			}
 //		}
-		
-		
-		Thread[] minerThread = new Thread[miners];
-		System.err.println("Test Writing Blockchain");
-		ByteArrayOutputStream out1 = new ByteArrayOutputStream();
-		try {
-			ObjectOutput out2 = new ObjectOutputStream(out1);
-			out2.writeObject(ballots);
-			System.out.println("Array size = " + out1.toByteArray().length);
-			ByteArrayInputStream in1 = new ByteArrayInputStream(out1.toByteArray());
-			ObjectInput in2 = new ObjectInputStream(in1);
-			in2.readObject();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		System.err.println("End Test Writing Blockchain");
-		for(int i = 0; i < miners; i++) {
-			try {
-				if(i == 0) {
-					
-//					out[1][i].writeObject(minerKey);
-					out[1][i].writeObject(blockchain);
-					out[1][i].flush();
-					out[1][i].reset();
-					out[1][i].writeObject(ballots);
-					out[1][i].flush();
-					out[1][i].reset();
-				} else {
-//					out[0][i].writeObject(minerKey);
-					out[0][i].writeObject(blockchain);
-					out[0][i].flush();
-					out[0][i].reset();
-					out[0][i].writeObject(ballots);
-					out[0][i].flush();
-					out[0][i].reset();
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		for(int i = 0; i < miners; i++) {
-			minerThread[i] = new Thread(new MinerThread(minerPrivKeys[i], individualMinerKeys, in[i], out[i]));
-			minerThread[i].start();
-		}
-		for(int i = 0; i < miners; i++) {
-			try {
-				minerThread[i].join();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
+//
+//		
+////		for(int i = 0; i < in.length; i++) {
+////			for(int j = 0; j < in[i].length; j++) {
+////				if(i == j) {
+////					continue;
+////				}
+////				System.out.printf("Testing %d->%d\n", i, j);
+////				try {
+////					out[i][j].writeInt(4);
+////					int x  = in[j][i].readInt();
+////				} catch (IOException e) {
+////					// TODO Auto-generated catch block
+////					e.printStackTrace();
+////				}
+////				
+////			}
+////		}
+//		
+//		
+//		Thread[] minerThread = new Thread[miners];
+//		System.err.println("Test Writing Blockchain");
+//		ByteArrayOutputStream out1 = new ByteArrayOutputStream();
+//		try {
+//			ObjectOutput out2 = new ObjectOutputStream(out1);
+//			out2.writeObject(ballots);
+//			System.out.println("Array size = " + out1.toByteArray().length);
+//			ByteArrayInputStream in1 = new ByteArrayInputStream(out1.toByteArray());
+//			ObjectInput in2 = new ObjectInputStream(in1);
+//			in2.readObject();
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		} catch (ClassNotFoundException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		System.err.println("End Test Writing Blockchain");
+//		for(int i = 0; i < miners; i++) {
+//			try {
+//				if(i == 0) {
+//					
+////					out[1][i].writeObject(minerKey);
+//					out[1][i].writeObject(blockchain);
+//					out[1][i].flush();
+//					out[1][i].reset();
+//					out[1][i].writeObject(ballots);
+//					out[1][i].flush();
+//					out[1][i].reset();
+//				} else {
+////					out[0][i].writeObject(minerKey);
+//					out[0][i].writeObject(blockchain);
+//					out[0][i].flush();
+//					out[0][i].reset();
+//					out[0][i].writeObject(ballots);
+//					out[0][i].flush();
+//					out[0][i].reset();
+//				}
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
+//		}
+//		for(int i = 0; i < miners; i++) {
+//			minerThread[i] = new Thread(new MinerThread(minerPrivKeys[i], individualMinerKeys, in[i], out[i]));
+//			minerThread[i].start();
+//		}
+//		for(int i = 0; i < miners; i++) {
+//			try {
+//				minerThread[i].join();
+//			} catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
 	}
 	public static BallotTransaction[] createTransactions(Election election, EncryptedVote[][] encryptedVotes, ProcessedBlockchain blockchain, int ringSize, SecureRandom rand) {
 		ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("secp256k1");
@@ -247,7 +246,6 @@ public class Test3 {
 		
 		ElectionTransaction electionTx = new ElectionTransaction(election);
 		blockchain.addTransaction(electionTx);
-		System.out.println(electionTx.getPosition());
 		for(int i = 0; i < encryptedVotes.length; i++) {
 			voterPriv[i][0] = new AdditiveElgamalPrivKey(g, rand);
 			voterPriv[i][1] = new AdditiveElgamalPrivKey(g, rand);
@@ -263,7 +261,6 @@ public class Test3 {
 			registration[i] = new RegistrationTransaction((AdditiveElgamalPubKey) voterPriv[i][0].getPubKey(), passwordCiphers[i], rand);
 			blockchain.addTransaction(registration[i]);
 		}
-
 
 
 		
@@ -314,10 +311,9 @@ public class Test3 {
 			ballots2[(i+1)%ballots2.length] = ballots[i];
 		}
 		
-		
+
 		
 		long time4 = System.currentTimeMillis();
-		System.out.println(time4 - time3);
 		for(int i = 0; i < ballots2.length; i++) {
 			if(!ballots2[i].verifyTransaction(blockchain))
 			{
@@ -327,7 +323,7 @@ public class Test3 {
 
 
 		long time5 = System.currentTimeMillis();
-		System.out.println(time5 - time4);
+		System.out.printf("%d, %d, ", time4 - time3, time5 - time4);
 		return ballots2;
 	}
 }

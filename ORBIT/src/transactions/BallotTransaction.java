@@ -218,7 +218,6 @@ public class BallotTransaction implements VoterTransaction {
 		//Step 10:  Proofs
 		ZKPProtocol fullProof = getVoterProof(ringMembers, minerKey);
 
-
 		//Generate CryptoData for Proofs.
 		CryptoData[] fullProofData = getVoterProverData(source, newKey, passwordGuess, passwordDisplacement,
 				rand, sourceVoterPrivKey, oldKeyR, minerKey, fullPasswordKey, origDummyR1, origPasswordR1, curve, g, h1,
@@ -228,6 +227,7 @@ public class BallotTransaction implements VoterTransaction {
 
 		voterProofs = null;
 		try {
+			System.out.flush();
 			voterProofs = fullProof.proveFiatShamir(fullProofData[0], fullProofData[1], fullProofData[2]);
 			//			ByteArrayOutputStream out1 = new ByteArrayOutputStream();
 			//			ObjectOutputStream out = new ObjectOutputStream(out1);
@@ -261,6 +261,7 @@ public class BallotTransaction implements VoterTransaction {
 				| ArraySizesDoNotMatchException e) {
 			e.printStackTrace();
 		}
+
 	}
 
 	private CryptoData[] getVoterProverData(int source, Additive_Priv_Key newKey,

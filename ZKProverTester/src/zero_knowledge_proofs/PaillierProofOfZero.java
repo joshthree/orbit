@@ -79,7 +79,7 @@ public class PaillierProofOfZero extends ZKPProtocol {
 	public CryptoData calcResponse(CryptoData publicInput, CryptoData secrets, BigInteger challenge,
 			CryptoData environment) throws NoTrueProofException, MultipleTrueProofException {
 		if(publicInput == null || secrets == null) return null;
-		BigInteger[] array = new BigInteger[2];
+		BigInteger[] array = new BigInteger[1];
 		CryptoData[] s = secrets.getCryptoDataArray();			// s = [rp, r]  -- rp is r for proof, r is r for ciphertext
 		CryptoData[] e = environment.getCryptoDataArray();		// e = [n, n2, g]
 

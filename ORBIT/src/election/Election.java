@@ -49,7 +49,17 @@ public class Election implements Serializable{
 		}
 		return encryptedVote;
 	}
-	
+
+	public EncryptedVote[] proveVote(EncryptedVote[] unproven, VoterDecision[] voterDecisions, SecureRandom rand) {
+		
+		EncryptedVote[] encryptedVote = new EncryptedVote[races.length];
+		if (voterDecisions.length != races.length)
+			throw new InputMismatchException("# of voterDecisions didn't match # of races");
+		for (int i = 0; i < voterDecisions.length; i++) {
+			encryptedVote[i] = races[i].proveVote(unproven[i], voterDecisions[i], rand);
+		}
+		return encryptedVote;
+	}
 	public boolean verify(EncryptedVote[] encryptedVotes) {
 		
 		if (encryptedVotes.length != races.length)
