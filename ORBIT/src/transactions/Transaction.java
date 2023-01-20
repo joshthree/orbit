@@ -1,6 +1,8 @@
 package transactions;
 
-public interface Transaction {
+import java.io.Serializable;
+
+public interface Transaction extends Serializable {
 	long getPosition();
 	void setPosition(long position);
 

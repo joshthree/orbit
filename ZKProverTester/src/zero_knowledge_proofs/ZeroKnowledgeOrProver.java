@@ -250,7 +250,7 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 		CryptoData[] a = a_unopened.getCryptoDataArray();
 		CryptoData[] z = z_unopened.getCryptoDataArray();
 		CryptoData[] e = environments.getCryptoDataArray();
-		CryptoData[] challenges = z[z.length-1].getCryptoDataArray();
+		CryptoData[] challenges = z[p.length].getCryptoDataArray();
 		BigInteger summedChallenge = challenge;
 		//		System.out.println("V:\tin = " + input);
 		//		System.out.println("V:\ta  = " + a_unopened);
@@ -265,7 +265,7 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 			flag = p[i].verifyResponse(in[i], a[i], z[i], c, e[i]);
 			if(!flag) 
 			{
-				System.out.println("OR failed on proof " + i);
+				System.out.println(Thread.currentThread() + " OR failed on proof " + i);
 				toReturn = false;
 			}
 //			/**/else System.out.println("OR good on " + i);
@@ -322,7 +322,6 @@ public class ZeroKnowledgeOrProver extends ZKPProtocol{
 
 		for(int j = 0; j < o.length; j++)
 		{
-
 			BigInteger c = simulatedChallenges[j].getBigInt();
 			if(c != null) 
 			{

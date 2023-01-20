@@ -60,4 +60,9 @@ public final class ECCurveData extends CryptoData {
 		// TODO Auto-generated method stub
 		return g.getEncoded(true);
 	}
+	@Override
+	public boolean equals(Object o) {
+		ECCurveData other = (ECCurveData) o;
+		return (c.equals(other.c)) && (g.equals(other.g));
+	}
 }

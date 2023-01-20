@@ -43,8 +43,8 @@ public class ECDummyBallot10dProver extends ZKPProtocol {
 		
 		CryptoData[] a = new CryptoData[pubIn.length];
 		a[0] = new ECPointData(envInPoint[0].multiply(secInInt[0]));
-		a[1] = new ECPointData(envInPoint[1].multiply(secInInt[0]).add(envInPoint[2].multiply(secInInt[2])));
-		a[2] = new ECPointData(envInPoint[1].multiply(secInInt[2]));
+		a[1] = new ECPointData(envInPoint[1].multiply(secInInt[0]).add(envInPoint[2].multiply(secInInt[1])));
+		a[2] = new ECPointData(envInPoint[1].multiply(secInInt[1]));
 		return new CryptoDataArray(a);
 	}
 
@@ -79,8 +79,8 @@ public class ECDummyBallot10dProver extends ZKPProtocol {
 		
 		CryptoData[] a = new CryptoData[pubIn.length];
 		a[0] = new ECPointData(envInPoint[0].multiply(secInInt[0]).subtract(pubInPoint[0].multiply(challenge)));
-		a[1] = new ECPointData(envInPoint[1].multiply(secInInt[0]).add(envInPoint[2].multiply(secInInt[2])).subtract(pubInPoint[1].multiply(challenge)));
-		a[2] = new ECPointData(envInPoint[1].multiply(secInInt[2]).subtract(pubInPoint[2].multiply(challenge)));
+		a[1] = new ECPointData(envInPoint[1].multiply(secInInt[0]).add(envInPoint[2].multiply(secInInt[1])).subtract(pubInPoint[1].multiply(challenge)));
+		a[2] = new ECPointData(envInPoint[1].multiply(secInInt[1]).subtract(pubInPoint[2].multiply(challenge)));
 		return new CryptoDataArray(a);
 	}
 
@@ -107,7 +107,7 @@ public class ECDummyBallot10dProver extends ZKPProtocol {
 		CryptoData[] z = new CryptoData[secInInt.length/2];
 		
 		for(int i = 0; i < z.length; i++) {
-			z[0] = new BigIntData(secInInt[i].add(challenge.multiply(secInInt[i+z.length])).mod(order));
+			z[i] = new BigIntData(secInInt[i].add(challenge.multiply(secInInt[i+z.length])).mod(order));
 		}
 		
 		return new CryptoDataArray(z);
@@ -139,7 +139,7 @@ public class ECDummyBallot10dProver extends ZKPProtocol {
 		ECPoint[] aInPoint = new ECPoint[5];
 		ECCurve curve = envIn[0].getECCurveData();
 		BigInteger order = curve.getOrder();
-		ECPoint[] envInPoint = new ECPoint[5];
+		ECPoint[] envInPoint = new ECPoint[envIn.length];
 		for(int i = 0; i < pubInPoint.length; i++) {
 			pubInPoint[i] = pubIn[i].getECPointData(curve);	
 		}
@@ -154,12 +154,12 @@ public class ECDummyBallot10dProver extends ZKPProtocol {
 			zInInt[i] = zIn[i].getBigInt();
 		}
 		
-		ECPoint[] left = new ECPoint[5];
-		ECPoint[] right = new ECPoint[5];
+		ECPoint[] left = new ECPoint[3];
+		ECPoint[] right = new ECPoint[3];
 		
 		left[0] = envInPoint[0].multiply(zInInt[0]);
-		left[1] = envInPoint[1].multiply(zInInt[0]).add(envInPoint[2].multiply(zInInt[2]));
-		left[2] = envInPoint[1].multiply(zInInt[2]);
+		left[1] = envInPoint[1].multiply(zInInt[0]).add(envInPoint[2].multiply(zInInt[1]));
+		left[2] = envInPoint[1].multiply(zInInt[1]);
 		
 		for(int i = 0; i < right.length; i++) {
 			right[i] = aInPoint[i].add(pubInPoint[i].multiply(challenge));

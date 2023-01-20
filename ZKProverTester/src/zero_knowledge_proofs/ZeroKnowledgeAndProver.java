@@ -34,8 +34,9 @@ public class ZeroKnowledgeAndProver extends ZKPProtocol {
 	@Override
 	public CryptoData initialComm(CryptoData input, CryptoData packedEnvironment)
 			throws ArraySizesDoNotMatchException, MultipleTrueProofException, NoTrueProofException {
-
+		
 		if(input == null) return null;
+		
 		CryptoData[] in = input.getCryptoDataArray();
 		CryptoData[] environment = packedEnvironment.getCryptoDataArray();
 		CryptoData[] out = new CryptoData[in.length];
@@ -45,8 +46,16 @@ public class ZeroKnowledgeAndProver extends ZKPProtocol {
 		{
 			if(in[i] == null)
 				out[i] = null;
-			else 
-				out[i] = p[i].initialComm(in[i], environment[i]);
+			else {
+				try {
+					out[i] = p[i].initialComm(in[i], environment[i]);					
+				} catch (Exception e) {
+					e.printStackTrace();
+					System.err.println(i);
+					System.exit(1);
+				}
+				
+			}
 		}
 		
 		return new CryptoDataArray(out);
@@ -117,9 +126,9 @@ public class ZeroKnowledgeAndProver extends ZKPProtocol {
 			try {
 				if(p[i].verifyResponse(in[i], initialComm[i], responses[i], challenge, environments[i]) == false)
 				{
-					System.out.println("AND failed on proof " + i);
+					System.out.println(Thread.currentThread() +  " AND failed on proof " + i);
 					System.out.println(p[i]);
-					toReturn = false;
+					return false;
 				}
 			}catch(NullPointerException e) {
 				System.out.println(p[i]);
@@ -156,14 +165,23 @@ public class ZeroKnowledgeAndProver extends ZKPProtocol {
 		
 		CryptoData[] e = environment.getCryptoDataArray();
 		CryptoData[] out = new CryptoData[in.length];
-		if(in.length != p.length || s.length != p.length) throw  new ArraySizesDoNotMatchException("" + p.length + " != " + in.length);
+		if(in.length != p.length || s.length != p.length) {
+			throw  new ArraySizesDoNotMatchException("" + p.length + " != " + in.length);
+		}
 
 		for(int i = 0; i < p.length; i++)
 		{
 			if(in[i] == null)
 				out[i] = null;
-			else 
-				out[i] = p[i].initialComm(in[i], s[i], e[i]);
+			else {
+				try {
+					out[i] = p[i].initialComm(in[i], s[i], e[i]);				
+				} catch (Exception ex) {
+					ex.printStackTrace();
+					System.err.println(i);
+					System.exit(1);
+				}
+			}
 		}
 		
 		return new CryptoDataArray(out);
@@ -177,12 +195,19 @@ public class ZeroKnowledgeAndProver extends ZKPProtocol {
 		CryptoData[] s = secrets.getCryptoDataArray();
 		CryptoData[] e = environment.getCryptoDataArray();
 		CryptoData[] out = new CryptoData[p.length];
-		for(int i = 0; i < p.length; i++)
-		{
-			if(in[i] == null)
-				out[i] = null;
-			else 
-				out[i] = p[i].initialCommSim(in[i], s[i], challenge, e[i]);
+		try{
+			for(int i = 0; i < p.length; i++)
+			{
+				if(in[i] == null)
+					out[i] = null;
+				else 
+					out[i] = p[i].initialCommSim(in[i], s[i], challenge, e[i]);
+			}
+		} catch (Exception ex) {
+			System.out.println("qwerygkjahdsgahdsm,vz");
+			System.out.println(in.length);
+			System.out.println(p.length);
+			throw ex;
 		}
 		
 		return new CryptoDataArray(out);

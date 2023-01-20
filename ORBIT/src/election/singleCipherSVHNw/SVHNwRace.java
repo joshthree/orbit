@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigInteger;
+import java.nio.MappedByteBuffer;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,6 +28,10 @@ import zero_knowledge_proofs.CryptoData.CryptoDataArray;
 
 public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Race 
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 6888214716014938859L;
 	private String description;
 	private int numCandidates;
 	private Additive_Pub_Key raceKey;
@@ -188,7 +193,7 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 	}
 
 	@Override
-	public EncryptedVote zero_vote(EncryptedVote phi) {
+	public EncryptedVote zeroVote(EncryptedVote phi) {
 		AdditiveCiphertext zeroVote = raceKey.getEmptyCiphertext();
 		return new SVHNwEncryptedVote(zeroVote, null);
 	}
@@ -217,6 +222,36 @@ public class SVHNwRace implements Race{ //Single Vote Homomorphic No write-in Ra
 		return false;
 	} //Single Vote Homomorphic No write-in Race
 	
+	@Override 
+	public byte[] getBytes() {
+		byte[][] toReturn = new byte[3][];
+		if(description != null) {
+			toReturn[0] = description.getBytes();
+		} else {
+			toReturn[0] = "null".getBytes();
+		}
+		toReturn[1] = MappedByteBuffer.wrap(new byte[4]).putInt(numCandidates).array();
+		toReturn[2] = raceKey.getBytes();
+		return org.bouncycastle.util.Arrays.concatenate(toReturn);
+	}
+
+	@Override
+	public Additive_Pub_Key getPubKey() {
+		// TODO Auto-generated method stub
+		return raceKey;
+	}
+
+	@Override
+	public EncryptedVote reRandomizeVote(EncryptedVote phi, BigInteger[][] rerandomizationValues) {
+		// TODO Auto-generated method stub
+		return new SVHNwEncryptedVote(((AdditiveCiphertext) phi.getCiphertext()).rerandomize(rerandomizationValues[0][0], raceKey), null);
+	}
+
+	@Override
+	public BigInteger[] generateRerandimizationValues(SecureRandom rand) {
+		// TODO Auto-generated method stub
+		return new BigInteger[] {raceKey.generateEphemeral(rand)};
+	}
 	
 
 }

@@ -183,4 +183,15 @@ public class CryptoDataArray extends CryptoData {
 		
 		return Arrays.concatenate(collectedBits);
 	}
+	
+	@Override
+	public boolean equals(Object o) {
+		boolean toReturn = true;
+		CryptoDataArray other = (CryptoDataArray) o;
+		if(other.size() != size()) return false;
+		for(int i = 0; i < data.length; i++) {
+			toReturn = toReturn && data[i].equals(other.data[i]); 
+		}
+		return toReturn;
+	}
 }

@@ -47,7 +47,7 @@ public class ECDummyBallot10bProver extends ZKPProtocol {
 		a[1] = new ECPointData(envInPoint[1].multiply(secInInt[0]).add(envInPoint[2].multiply(secInInt[2])));
 		a[2] = new ECPointData(envInPoint[1].multiply(secInInt[2]));
 		a[3] = new ECPointData(envInPoint[3].multiply(secInInt[1]).add(envInPoint[4].multiply(secInInt[3])));
-		a[4] = new ECPointData(envInPoint[3].multiply(secInInt[4]));
+		a[4] = new ECPointData(envInPoint[3].multiply(secInInt[3]));
 		return new CryptoDataArray(a);
 	}
 
@@ -87,7 +87,7 @@ public class ECDummyBallot10bProver extends ZKPProtocol {
 		a[1] = new ECPointData(envInPoint[1].multiply(secInInt[0]).add(envInPoint[2].multiply(secInInt[2])).subtract(pubInPoint[1].multiply(challenge)));
 		a[2] = new ECPointData(envInPoint[1].multiply(secInInt[2]).subtract(pubInPoint[2].multiply(challenge)));
 		a[3] = new ECPointData(envInPoint[3].multiply(secInInt[1]).add(envInPoint[4].multiply(secInInt[3])).subtract(pubInPoint[3].multiply(challenge)));
-		a[4] = new ECPointData(envInPoint[3].multiply(secInInt[4]).subtract(pubInPoint[4].multiply(challenge)));
+		a[4] = new ECPointData(envInPoint[3].multiply(secInInt[3]).subtract(pubInPoint[4].multiply(challenge)));
 		return new CryptoDataArray(a);
 	}
 
@@ -114,9 +114,8 @@ public class ECDummyBallot10bProver extends ZKPProtocol {
 		CryptoData[] z = new CryptoData[secInInt.length/2];
 		
 		for(int i = 0; i < z.length; i++) {
-			z[0] = new BigIntData(secInInt[i].add(challenge.multiply(secInInt[i+z.length])).mod(order));
+			z[i] = new BigIntData(secInInt[i].add(challenge.multiply(secInInt[i+z.length])).mod(order));
 		}
-		
 		return new CryptoDataArray(z);
 	}
 
@@ -170,17 +169,17 @@ public class ECDummyBallot10bProver extends ZKPProtocol {
 		left[2] = envInPoint[1].multiply(zInInt[2]);
 		left[3] = envInPoint[3].multiply(zInInt[1]).add(envInPoint[4].multiply(zInInt[3]));
 		left[4] = envInPoint[3].multiply(zInInt[3]);
-		
+		boolean verify = true;
 		for(int i = 0; i < right.length; i++) {
 			right[i] = aInPoint[i].add(pubInPoint[i].multiply(challenge));
 			if (!right[i].equals(left[i])) {
 				System.out.printf("Failed on statement %d in %s\n", i, this.getClass().getName());
-				return false;
+				verify = false;
 			}
 		}
 		
 		
-		return true;
+		return verify;
 	}
 
 }

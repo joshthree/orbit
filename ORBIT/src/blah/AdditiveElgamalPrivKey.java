@@ -44,6 +44,12 @@ public class AdditiveElgamalPrivKey implements Additive_Priv_Key {
 		ECPoint newCipher = ((ECPoint) cipher2.getCipher(pub)).add(cipher2.getEphemeral(pub).multiply(privKey.negate()));
 		return new AdditiveElgamalCiphertext(newCipher, cipher2.getEphemeral(pub));
 	}
+	
+	public AdditiveCiphertext addKey(Ciphertext cipher) {
+		AdditiveElgamalCiphertext cipher2 = (AdditiveElgamalCiphertext) cipher;
+		ECPoint newCipher = ((ECPoint) cipher2.getCipher(pub)).add(cipher2.getEphemeral(pub).multiply(privKey));
+		return new AdditiveElgamalCiphertext(newCipher, cipher2.getEphemeral(pub));
+	}
 
 	@Override
 	public AdditiveCiphertext partialGroupDecrypt(Ciphertext c, Channel[] channels) {

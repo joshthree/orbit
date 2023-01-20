@@ -66,19 +66,19 @@ public class Test1ElgamalMulti {
 		}
 
 		ByteArrayOutputStream outByte = new ByteArrayOutputStream();
-		EncryptedVote output = null;
-		try {
-			ObjectOutputStream out = new ObjectOutputStream(outByte);
-
-			out.writeObject(bigPsi2.get(0));
-			ByteArrayInputStream inByte = new ByteArrayInputStream(outByte.toByteArray());
-			ObjectInputStream in = new ObjectInputStream(inByte);
-			output = (EncryptedVote) in.readObject();
-			bigPsi2.add(output);
-		} catch (IOException | ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+//		EncryptedVote output = null;
+//		try {
+//			ObjectOutputStream out = new ObjectOutputStream(outByte);
+//
+//			out.writeObject(bigPsi2.get(0));
+//			ByteArrayInputStream inByte = new ByteArrayInputStream(outByte.toByteArray());
+//			ObjectInputStream in = new ObjectInputStream(inByte);
+//			output = (EncryptedVote) in.readObject();
+//			bigPsi2.add(output);
+//		} catch (IOException | ClassNotFoundException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		long start2 = System.currentTimeMillis();
 		boolean[] verify = new boolean[bigPsi2.size()];
 		for (int i = 0; i < bigPsi2.size(); i++) {

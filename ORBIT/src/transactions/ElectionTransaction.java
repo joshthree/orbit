@@ -2,10 +2,16 @@ package transactions;
 
 import java.nio.MappedByteBuffer;
 
+import org.bouncycastle.util.Arrays;
+
 import election.Election;
 
 public class ElectionTransaction implements Transaction {
-	private long position;
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -1043962846326807051L;
+	private long position = -1;
 	private Election election;
 	public ElectionTransaction(Election election) {
 		this.election = election;
@@ -26,13 +32,16 @@ public class ElectionTransaction implements Transaction {
 	@Override
 	public boolean verifyTransaction(ProcessedBlockchain b) {
 		// TODO Auto-generated method stub
-		return false;
+		return true;
 	}
 
 	@Override
 	public byte[] getBytes() {
 		// TODO Auto-generated method stub
-		return MappedByteBuffer.wrap(new byte[8]).putLong(position).array();
+		byte[][] toReturn = new byte[2][];
+		toReturn[0] = MappedByteBuffer.wrap(new byte[8]).putLong(position).array();
+		toReturn[1] = election.getBytes();
+		return Arrays.concatenate(toReturn);
 	}
 	
 	public Election getElection() {

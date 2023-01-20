@@ -4,9 +4,11 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigInteger;
+import java.nio.MappedByteBuffer;
 import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Arrays;
+
+import org.bouncycastle.util.Arrays;
 
 import blah.AdditiveCiphertext;
 import blah.Additive_Priv_Key;
@@ -28,10 +30,13 @@ import zero_knowledge_proofs.CryptoData.CryptoDataArray;
 
 public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-in Race 
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 8485253615440537084L;
 	private String description;
 	private int numCandidates;
 	private Additive_Pub_Key raceKey;
-	private ZKPProtocol voteProof;
 	
 	public SVHNwRaceMulti (String description, int numCandidates, Additive_Pub_Key raceKey) {
 		this.description = description;
@@ -299,7 +304,7 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 	}
 
 	@Override
-	public EncryptedVote zero_vote(EncryptedVote phi) {
+	public EncryptedVote zeroVote(EncryptedVote phi) {
 		AdditiveCiphertext[] zeroVote = new AdditiveCiphertext[numCandidates];
 		for(int i = 0; i < zeroVote.length; i++) {
 			zeroVote[i] = raceKey.getEmptyCiphertext();
@@ -331,6 +336,39 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 		return false;
 	} //Single Vote Homomorphic No write-in Race
 	
+	@Override 
+	public byte[] getBytes() {
+		byte[][] toReturn = new byte[3][];
+		if(description != null) {
+			toReturn[0] = description.getBytes();
+		} else {
+			toReturn[0] = "null".getBytes();
+		}
+		toReturn[1] = MappedByteBuffer.wrap(new byte[4]).putInt(numCandidates).array();
+		toReturn[2] = raceKey.getBytes();
+		return Arrays.concatenate(toReturn);
+	}
+	@Override
+	public Additive_Pub_Key getPubKey() {
+		// TODO Auto-generated method stub
+		return raceKey;
+	}
+
+	@Override
+	public EncryptedVote reRandomizeVote(EncryptedVote phi, BigInteger[][] rerandomizationValues) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public BigInteger[] generateRerandimizationValues(SecureRandom rand) {
+		BigInteger[] toReturn = new BigInteger[numCandidates];
+		
+		for(int i = 0; i < numCandidates; i++) {
+			toReturn[i] = raceKey.generateEphemeral(rand);
+		}
+		return toReturn;
+	}
 	
 
 }

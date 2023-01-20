@@ -30,7 +30,7 @@ public class Test2Multi {
 		electionTest(numRaces, numCandidates, numVotes, rand, pub, bitSeparation);
 	}
 
-	public static void electionTest(int numRaces, int numCandidates, int numVotes, SecureRandom rand,
+	public static EncryptedVote[][] electionTest(int numRaces, int numCandidates, int numVotes, SecureRandom rand,
 			Additive_Pub_Key pub, int bitSeparation) {
 		Race[] races = new Race[numRaces];
 		
@@ -38,7 +38,7 @@ public class Test2Multi {
 			races[i] = new SVHNwRaceMulti("", numCandidates, pub);
 		}
 		AdditiveElgamalPubKey minerKey = null;
-		Election election = new Election(races, String.format("test election, numCandidates=%d, numRaces=%d", numCandidates, numRaces), minerKey);
+		Election election = new Election(races, String.format("test election, numCandidates=%d, numRaces=%d", numCandidates, numRaces), minerKey, 8, 4, 3);
 		
 		int[][] bdResults = new int[numRaces][numCandidates+1];
 		
@@ -94,5 +94,6 @@ public class Test2Multi {
 		
 		System.out.println(start1-start0);
 		System.out.println(start2-start1);
+		return encryptedVotes;
 	}
 }

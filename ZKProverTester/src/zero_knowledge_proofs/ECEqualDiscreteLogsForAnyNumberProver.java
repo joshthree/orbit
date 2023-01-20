@@ -1,6 +1,7 @@
 package zero_knowledge_proofs;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 
 import org.bouncycastle.math.ec.ECCurve;
 import org.bouncycastle.math.ec.ECPoint;

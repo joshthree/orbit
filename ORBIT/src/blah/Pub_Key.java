@@ -10,5 +10,5 @@ public interface Pub_Key extends Externalizable {
 	Ciphertext getEmptyCiphertext();
 	Ciphertext encrypt(BigInteger m, SecureRandom rand);
 	
-	
+	byte[] getBytes();
 }

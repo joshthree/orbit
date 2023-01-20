@@ -1,11 +1,15 @@
 package blah;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.InputMismatchException;
 import java.util.Random;
 
@@ -32,8 +36,8 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 	private static final long serialVersionUID = -7623685611084207477L;
 	private ECPoint g;
 	private ECPoint y;
-	private ZKPProtocol ddhZKP = new ECEqualDiscreteLogsProver();
-	protected AdditiveElgamalPubKey() {
+	private transient ZKPProtocol ddhZKP = new ECEqualDiscreteLogsProver();
+	public AdditiveElgamalPubKey() {
 		g = y = null;
 	}
 	public AdditiveElgamalPubKey(ECPoint g, ECPoint y) {
@@ -94,12 +98,11 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 		ECCurve curve = y.getCurve();
 		byte[] order = curve.getOrder().toByteArray();
 		byte[] cofactor = curve.getCofactor().toByteArray();
-
 		out.writeInt(order.length);
-		out.write(order);
-		
+		out.write(order, 0, order.length);
+
 		out.writeInt(cofactor.length);
-		out.write(cofactor);
+		out.write(cofactor, 0, cofactor.length);
 		if(curve instanceof ECCurve.Fp) {
 			out.writeByte(1);
 			ECCurve.Fp curve2 = (ECCurve.Fp) curve;
@@ -108,13 +111,13 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 			byte[] q = curve2.getQ().toByteArray();
 			
 			out.writeInt(a.length);
-			out.write(a);
+			out.write(a, 0, a.length);
 			
 			out.writeInt(b.length);
-			out.write(b);
+			out.write(b, 0, b.length);
 			
 			out.writeInt(q.length);
-			out.write(q);
+			out.write(q, 0, q.length);
 			
 		}
 		else if(curve instanceof ECCurve.F2m) {
@@ -125,10 +128,9 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 				byte[] b = curve2.getB().getEncoded();
 				int m = curve2.getM();
 				out.writeInt(a.length);
-	
-				out.write(a);
+				out.write(a, 0, a.length);
 				out.writeInt(b.length);
-				out.write(b);
+				out.write(b, 0, b.length);
 				out.writeInt(m);
 				out.writeInt(curve2.getK1());
 				out.writeInt(curve2.getK2());
@@ -140,59 +142,61 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 				byte[] b = curve2.getB().getEncoded();
 				int m = curve2.getM();
 				out.writeInt(a.length);
-	
-				out.write(a);
+				out.write(a, 0, a.length);
 				out.writeInt(b.length);
-				out.write(b);
+				out.write(b, 0, b.length);
+				out.writeInt(m);
 				out.writeInt(m);
 				out.writeInt(curve2.getK1());
 			}
 		}
 		else {
 			out.writeByte(4);
-			out.writeObject(curve.getClass().getName());
+			byte[] curveBytes = curve.getClass().getName().getBytes();
+			out.writeInt(curveBytes.length);
+			out.write(curveBytes,0,curveBytes.length);
 		}
 		
 		byte[] gBytes = g.getEncoded(true);
 		byte[] yBytes = y.getEncoded(true);
 		out.writeInt(gBytes.length);
-		out.write(gBytes);
+		out.write(gBytes, 0, gBytes.length);
 		out.writeInt(yBytes.length);
-		out.write(yBytes);
+		out.write(yBytes, 0, yBytes.length);
 	}
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
 		ECCurve curve = null;
 		int orderSize = in.readInt();
+
 		byte[] order = new byte[orderSize];
-		if(in.read(order) != orderSize) {
-			throw new IOException("Bad Serialization");
+		int blah;
+		if((blah = in.read(order, 0, orderSize)) != orderSize) {
+			throw new IOException(String.format("Bad Serialization: order -- %d != %d", orderSize, blah));
 		}
-		
 		int cofactorSize = in.readInt();
 		byte[] cofactor = new byte[cofactorSize];
-		if(in.read(cofactor) != cofactorSize) {
-			throw new IOException("Bad Serialization");
+		if((blah = in.read(cofactor, 0, cofactorSize)) != cofactorSize) {
+			throw new IOException(String.format("Bad Serialization: cofactor -- %d != %d", cofactorSize, blah));
 		}
-		
 		
 		byte curveType = in.readByte();
 		
 		if(curveType == 1) {
 			int aSize = in.readInt();
 			byte[] a = new byte[aSize];
-			if(in.read(a) != aSize) {
+			if(in.read(a, 0, aSize) != aSize) {
 				throw new IOException("Bad Serialization");
 			}
 			int bSize = in.readInt();
 			byte[] b = new byte[bSize];
-			if(in.read(b) != bSize) {
+			if(in.read(b, 0, bSize) != bSize) {
 				throw new IOException("Bad Serialization");
 			}
 			int qSize = in.readInt();
 			byte[] q = new byte[qSize];
-			if(in.read(q) != qSize) {
+			if(in.read(q, 0, qSize) != qSize) {
 				throw new IOException("Bad Serialization");
 			}
 			curve = new ECCurve.Fp(new BigInteger(q), new BigInteger(a), new BigInteger(b), new BigInteger(order), new BigInteger(cofactor));
@@ -201,12 +205,12 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 		if(curveType == 2) {
 			int aSize = in.readInt();
 			byte[] a = new byte[aSize];
-			if(in.read(a) != aSize) {
+			if(in.read(a, 0, aSize) != aSize) {
 				throw new IOException("Bad Serialization");
 			}
 			int bSize = in.readInt();
 			byte[] b = new byte[bSize];
-			if(in.read(b) != bSize) {
+			if(in.read(b, 0, bSize) != bSize) {
 				throw new IOException("Bad Serialization");
 			}
 			int m = in.readInt();
@@ -219,12 +223,12 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 		if(curveType == 3) {
 			int aSize = in.readInt();
 			byte[] a = new byte[aSize];
-			if(in.read(a) != aSize) {
+			if(in.read(a, 0, aSize) != aSize) {
 				throw new IOException("Bad Serialization");
 			}
 			int bSize = in.readInt();
 			byte[] b = new byte[bSize];
-			if(in.read(b) != bSize) {
+			if(in.read(b, 0, bSize) != bSize) {
 				throw new IOException("Bad Serialization");
 			}
 			int m = in.readInt();
@@ -233,7 +237,11 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 		}
 		if(curveType == 4) {
 			try {
-				Class<?> cls = Class.forName((String) in.readObject());
+				int classNameSize = in.readInt();
+				byte[] curveBytes = new byte[classNameSize];
+				in.read(curveBytes,0, classNameSize);
+				String curveClassName = new String(curveBytes);
+				Class<?> cls = Class.forName(curveClassName);
 				curve = (ECCurve) cls.getConstructors()[0].newInstance(new Object[0]);
 			} catch (Exception e) {
 				System.err.println("gfdjshglfskdjhlkj");
@@ -247,16 +255,11 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 		
 		int gSize = in.readInt();
 		byte[] g = new byte[gSize];
-		if(in.read(g) != gSize) {
-			throw new IOException("Bad Serialization");
-		}
-		
+		in.read(g, 0, gSize);
+
 		int ySize = in.readInt();
 		byte[] y = new byte[ySize];
-		if(in.read(y) != ySize) {
-			throw new IOException("Bad Serialization");
-		}
-		
+		in.read(y, 0, ySize);
 		this.g = curve.decodePoint(g);
 		this.y = curve.decodePoint(y);
 	}
@@ -284,6 +287,18 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 	@Override
 	public ZKPProtocol getZKPforRerandomization() {
 		return this.getZKPforProofOfEncryption();
+	}
+	@Override
+	public byte[] getBytes() {
+		
+		ByteArrayOutputStream out1 = new ByteArrayOutputStream();
+		try {
+			ObjectOutput out = new ObjectOutputStream(out1);
+			out.writeObject(this);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return out1.toByteArray();
 	}
 
 

@@ -37,6 +37,8 @@ public class ECSchnorrCombinations extends ZKPProtocol {
 				if(structure2[i][j][1] > numSecrets) numSecrets = structure2[i][j][1];
 			}
 		}
+		numSecrets++;
+		numGen++;
 	}
 	
 
@@ -174,7 +176,7 @@ public class ECSchnorrCombinations extends ZKPProtocol {
 		BigInteger[] z = new BigInteger[numSecrets];
 		
 		for(int i = 0; i < numSecrets; i++) {
-			z[i] = sec[i].add(sec[i+numSecrets/2].multiply(challenge)).mod(curve.getOrder());
+			z[i] = sec[i].add(sec[i+numSecrets].multiply(challenge)).mod(curve.getOrder());
 		}
 		return new CryptoDataArray(z);
 	}
@@ -211,24 +213,26 @@ public class ECSchnorrCombinations extends ZKPProtocol {
 		CryptoData[] aInUnpacked = a.getCryptoDataArray();
 		CryptoData[] zInUnpacked = z.getCryptoDataArray();
 		BigInteger[] zIn = new BigInteger[numSecrets];
-		for(int i = 0; i < numSecrets; i++) {
+		for(int i = 0; i < zIn.length; i++) {
 			zIn[i] = zInUnpacked[i].getBigInt();
 		}
-		ECPoint[] aIn = new ECPoint[numPub]; 
+		ECPoint[] aIn = new ECPoint[numPub];
+		boolean verify = true;
 		for(int i = 0; i < numPub; i++) {
 			aIn[i] = aInUnpacked[i].getECPointData(curve);
 			ECPoint left = curve.getInfinity();
 			ECPoint right = curve.getInfinity();
 			for(int j = 0; j < structure[i].length; j++) {
 				left = left.add(env[structure[i][j][0]].multiply(zIn[structure[i][j][1]]));
-				right = aIn[i].add(pub[i].multiply(challenge));
-				if(!left.equals(right)) {
-					System.out.println(String.format("On %d, %d:  %s != %s", i, j, left.normalize(), right.normalize()));
-					return false;
-				}
+			}
+			right = aIn[i].add(pub[i].multiply(challenge));
+			if(!left.equals(right)) {
+				System.out.println(String.format("On %d:  %s != %s", i, left.normalize(), right.normalize()));
+				
+				verify = false;
 			}
 		}
 		
-		return true;
+		return verify;
 	}
 }

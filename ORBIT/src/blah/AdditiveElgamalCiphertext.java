@@ -1,5 +1,6 @@
 package blah;
 
+import java.io.ByteArrayOutputStream;
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -10,6 +11,7 @@ import java.util.Random;
 
 import org.bouncycastle.math.ec.ECCurve;
 import org.bouncycastle.math.ec.ECPoint;
+import org.bouncycastle.util.Arrays;
 
 import zero_knowledge_proofs.CryptoData.BigIntData;
 import zero_knowledge_proofs.CryptoData.CryptoData;
@@ -272,5 +274,11 @@ public class AdditiveElgamalCiphertext extends AdditiveCiphertext {
 		
 		return ephemeral.negate().mod(pub.getOrder());
 	}
+	@Override
+	public byte[] getBytes() {
+		return Arrays.concatenate(cipherBytes, ephemeralBytes);
+	}
+	
+	
 
 }

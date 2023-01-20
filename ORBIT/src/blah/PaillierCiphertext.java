@@ -145,6 +145,12 @@ public class PaillierCiphertext extends AdditiveCiphertext{
 		return ephemeral.modInverse(((PaillierPubKey) pub).getN());
 	}
 
+	@Override
+	public byte[] getBytes() {
+		// TODO Auto-generated method stub
+		return cipher.toByteArray();
+	}
+
 
 	
 	

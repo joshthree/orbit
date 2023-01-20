@@ -11,6 +11,8 @@ import org.bouncycastle.math.ec.ECPoint;
 import blah.AdditiveElgamalPrivKey;
 import blah.Additive_Priv_Key;
 import blah.Additive_Pub_Key;
+import election.EncryptedVote;
+import zero_knowledge_proofs.ZKToolkit;
 
 public class Test3MultiWithElgamal {
 	public static void main(String arg[]) {
@@ -18,18 +20,36 @@ public class Test3MultiWithElgamal {
 		int numRaces = 5;
 		int numCandidates = 4;
 		int numVotes = 50;
-
+		int miners = 10;
+		
+		
 		ECCurve c = spec.getCurve();
 		ECPoint g = spec.getG();
+		
+		
+//		ECPoint p = g.multiply(BigInteger.valueOf(1000000));
+//		
+//		long time1 = System.currentTimeMillis();
+//		while(!p.equals(c.getInfinity()))
+//		{
+//			p = p.subtract(g);
+//		}
+		long time2 = System.currentTimeMillis();
+//		System.out.println(time2-time1);
 		BigInteger order = c.getOrder();
-		//SecureRandom rand = new SecureRandom("fhdjkghqeriupgyqhkdlvdjchlzvkcjxvbfiuhagperidfhgkhfdspogieqrjl".getBytes());
-		SecureRandom rand = new SecureRandom();
+		
+		SecureRandom rand = new SecureRandom("fhdjkghqeriupgyqhkdlvdjchlzvkcjxvbfiuhagperidfhgkhfdspogieqrjl".getBytes());
+		
+		BigInteger x = ZKToolkit.random(order, rand);
+		
+//		SecureRandom rand = new SecureRandom();
 		
 		Additive_Priv_Key priv = new AdditiveElgamalPrivKey(g, rand); 
 //		System.out.println(priv);
 		Additive_Pub_Key pub = priv.getPubKey();
 		int bitSeparation = 33;
 		
-		Test2Multi.electionTest(numRaces, numCandidates, numVotes, rand, pub, bitSeparation);
+		Test3Multi.electionTest(numRaces, numCandidates, numVotes, miners, rand, pub, bitSeparation);
+		
 	}
 }

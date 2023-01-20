@@ -54,4 +54,16 @@ public final class ECPointData extends CryptoData {
 		// TODO Auto-generated method stub
 		return data;
 	}
+	@Override
+	public boolean equals(Object o) {
+		ECPointData other = null;
+		try {
+			other = (ECPointData) o;
+		}catch(ClassCastException e) {
+			e.printStackTrace();
+			System.out.println("this = " + this);
+			System.out.println("o = " + o);
+		}
+		return (p.equals(other.p));
+	}
 }

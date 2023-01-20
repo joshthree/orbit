@@ -16,4 +16,6 @@ public abstract class Ciphertext implements Serializable {
 
 	public abstract BigInteger getValue(Pub_Key pub);
 	
+	public abstract byte[] getBytes();
+	
 }

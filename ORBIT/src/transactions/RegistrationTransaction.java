@@ -1,22 +1,25 @@
 package transactions;
 
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 
 import blah.AdditiveElgamalCiphertext;
 import blah.AdditiveElgamalPubKey;
-import blah.Additive_Pub_Key;
 
 public class RegistrationTransaction implements SourceTransaction{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -7612729355568619624L;
 	private AdditiveElgamalPubKey voterKey;
 	private AdditiveElgamalCiphertext password;
 	private AdditiveElgamalCiphertext dummyFlag;
-	private int position = -1;
+	private long position = -1;
 
-	public RegistrationTransaction(AdditiveElgamalPubKey voterKey, AdditiveElgamalCiphertext password, AdditiveElgamalPubKey minerKey, SecureRandom rand) {
+	public RegistrationTransaction(AdditiveElgamalPubKey voterKey, AdditiveElgamalCiphertext password, SecureRandom rand) {
 		this.voterKey = voterKey;
-		dummyFlag = (AdditiveElgamalCiphertext) minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO);
-		Additive_Pub_Key origPubKey = voterKey.combineKeys(minerKey);
+		dummyFlag = (AdditiveElgamalCiphertext) voterKey.encrypt(BigInteger.ZERO, BigInteger.ZERO);
 		this.password = password;
 	}
 	
@@ -32,14 +35,14 @@ public class RegistrationTransaction implements SourceTransaction{
 	}
 
 	@Override
-	public int getPosition() {
+	public long getPosition() {
 		return position;
 	}
 
 
 
 	@Override
-	public void setPosition(int position) {
+	public void setPosition(long position) {
 		this.position = position;
 	}
 
@@ -52,6 +55,11 @@ public class RegistrationTransaction implements SourceTransaction{
 	@Override
 	public AdditiveElgamalCiphertext getDummyFlag() {
 		return dummyFlag;
+	}
+
+	@Override
+	public byte[] getBytes() {
+		return ByteBuffer.wrap(new byte[8]).putLong(position).array();
 	}
 
 }

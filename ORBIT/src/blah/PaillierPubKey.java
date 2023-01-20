@@ -1,12 +1,16 @@
 package blah;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.InputMismatchException;
 import java.util.Random;
+
+import org.bouncycastle.util.Arrays;
 
 import zero_knowledge_proofs.PaillierProofOfZero;
 import zero_knowledge_proofs.ZKPProtocol;
@@ -142,6 +146,10 @@ public class PaillierPubKey implements Additive_Pub_Key{
 	@Override
 	public ZKPProtocol getZKPforRerandomization() {
 		return this.getZKPforProofOfEncryption();
+	}
+	@Override
+	public byte[] getBytes() {
+		return Arrays.concatenate(n.toByteArray(), g.toByteArray());
 	}
 	
 }

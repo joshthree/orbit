@@ -18,7 +18,6 @@ public class Test2 {
 		int numRaces = 5;
 		int numCandidates = 4;
 		int numVotes = 50;
-		
 		//SecureRandom rand = new SecureRandom("fhdjkghqeriupgyqhkdlvdjchlzvkcjxvbfiuhagperidfhgkhfdspogieqrjl".getBytes());
 		SecureRandom rand = new SecureRandom();
 		
@@ -38,7 +37,7 @@ public class Test2 {
 			races[i] = new SVHNwRace("", numCandidates, pub, bitSeparation);
 		}
 		AdditiveElgamalPubKey minerKey = null;
-		Election election = new Election(races, String.format("test election, numCandidates=%d, numRaces=%d", numCandidates, numRaces), minerKey);
+		Election election = new Election(races, String.format("test election, numCandidates=%d, numRaces=%d", numCandidates, numRaces), minerKey, 16, 8, 5);
 		
 		int[][] bdResults = new int[numRaces][numCandidates+1];
 		

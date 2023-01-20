@@ -5,7 +5,7 @@ import java.io.Serializable;
 import blah.AdditiveCiphertext;
 import blah.Additive_Pub_Key;
 
-public interface VoterTransaction extends Serializable {
+public interface VoterTransaction extends Transaction {
 	AdditiveCiphertext getPasswordCiphertext();
 	AdditiveCiphertext getDummyFlag();
 	

@@ -31,16 +31,25 @@ public class BigIntData extends CryptoData {
 	@Override
 	public String toString()
 	{
+		if(data == null) return "null";
 		return data.toString();
 	}
 	@Override
 	public String toString64()
 	{
+		if(data == null) return "null";
 		return Base64.getEncoder().encodeToString(data.toByteArray());
 	}
 	@Override
 	public byte[] getBytes() {
+		if(data == null) return null;
 		// TODO Auto-generated method stub
 		return data.toByteArray();
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		BigIntData other = (BigIntData) o;
+		return (data.equals(other.data));
 	}
 }

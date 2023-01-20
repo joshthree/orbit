@@ -1,6 +1,7 @@
 package zero_knowledge_proofs;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 
 import org.bouncycastle.math.ec.ECCurve;
 import org.bouncycastle.math.ec.ECPoint;
@@ -88,13 +89,27 @@ public class ECEqualDiscreteLogsProver extends ZKPProtocol {
 		
 		ECCurve c = e[0].getECCurveData();
 		ECPoint g = e[0].getECPointData(c);
-		ECPoint h = e[1].getECPointData(c);
+		ECPoint h;
+		try{
+			h = e[1].getECPointData(c);
+		} catch (Exception ex) {
+			System.out.println("qewytdijcvnzxmvhfd");
+			System.out.println(environment);
+			ex.printStackTrace();
+			return false;
+		}
+		
 		ECPoint y_g = i[0].getECPointData(c);
 		ECPoint y_h = i[1].getECPointData(c);
 		BigInteger zNumber = resp[0].getBigInt();
 		ECPoint a_1 = a_pack[0].getECPointData(c);
 		ECPoint a_2 = a_pack[1].getECPointData(c);
-		return (((y_g.multiply(challenge).add(a_1))).equals(g.multiply(zNumber)) && ((y_h.multiply(challenge).add(a_2))).equals(h.multiply(zNumber)));
+		boolean verify = (((y_g.multiply(challenge).add(a_1))).equals(g.multiply(zNumber)) && ((y_h.multiply(challenge).add(a_2))).equals(h.multiply(zNumber)));
+		if(!verify) {
+			System.out.printf("Error: %s != %s OR %s != %s\n", ((y_g.multiply(challenge).add(a_1))).normalize(), g.multiply(zNumber).normalize(), ((y_h.multiply(challenge).add(a_2))).normalize(), h.multiply(zNumber).normalize());
+			System.out.flush();
+		}
+		return verify;
 
 	}
 
@@ -147,7 +162,6 @@ public class ECEqualDiscreteLogsProver extends ZKPProtocol {
 //		CryptoData[] i = publicInput.getCryptoDataArray();
 		CryptoData[] s = secrets.getCryptoDataArray();
 		CryptoData[] e = environment.getCryptoDataArray();
-
 		BigInteger x = s[1].getBigInt();
 		BigInteger r = s[0].getBigInt();
 		array[0] = (r.add(x.multiply(challenge))).mod(e[0].getECCurveData().getOrder());

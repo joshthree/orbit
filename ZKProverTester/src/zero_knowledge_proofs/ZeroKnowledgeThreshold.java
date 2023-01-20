@@ -81,7 +81,7 @@ public class ZeroKnowledgeThreshold extends ZKPProtocol {
 		{
 
 			CryptoData c = simulatedChallenges[j];
-			if(!c.getBigInt().equals(BigInteger.ZERO)) 
+			if(c != null) 
 			{
 				if(i[j] == null)
 					o[j] = null;
@@ -166,7 +166,7 @@ public class ZeroKnowledgeThreshold extends ZKPProtocol {
 		for(int i = 0; i < p.length; i++)
 		{
 			BigInteger c = simulatedChallenges[i].getBigInt();
-			if(!c.equals(BigInteger.ZERO)) {
+			if(c != null) {
 				positions[count] = i;
 				count++;
 				simChallenges[count][0] = c;
@@ -309,7 +309,7 @@ public class ZeroKnowledgeThreshold extends ZKPProtocol {
 		{
 
 			BigInteger c = simulatedChallenges[j].getBigInt();
-			if(!c.equals(BigInteger.ZERO)) 
+			if(c != null) 
 			{
 				if(i[j] == null)
 					o[j] = null;
@@ -453,7 +453,7 @@ public class ZeroKnowledgeThreshold extends ZKPProtocol {
 		for(int i = 0; i < p.length; i++)
 		{
 			BigInteger c = simulatedChallenges[i].getBigInt();
-			if(count < positions.length && !c.equals(BigInteger.ZERO)) {
+			if(count < positions.length && c != null) {
 				positions[count] = i;
 				count++;
 				simChallenges[count][0] = c;

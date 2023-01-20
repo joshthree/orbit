@@ -1,12 +1,18 @@
 package transactions;
 
+import java.nio.ByteBuffer;
+
 import blah.AdditiveCiphertext;
 import blah.Additive_Pub_Key;
 
 public class SpoilTransaction implements SourceTransaction{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 6855692716938401733L;
 	private Additive_Pub_Key voterKey;
 	private BallotTransaction sourceTransaction;
-	private int position = -1;
+	private long position = -1;
 	
 	public BallotTransaction getSourceTransaction() {
 		return null;
@@ -25,14 +31,14 @@ public class SpoilTransaction implements SourceTransaction{
 	}
 
 	@Override
-	public int getPosition() {
+	public long getPosition() {
 		return position;
 	}
 
 
 
 	@Override
-	public void setPosition(int position) {
+	public void setPosition(long position) {
 		this.position = position;
 	}
 
@@ -47,4 +53,10 @@ public class SpoilTransaction implements SourceTransaction{
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+	@Override
+	public byte[] getBytes() {
+		return ByteBuffer.wrap(new byte[8]).putLong(position).array();
+	}
+	
 }

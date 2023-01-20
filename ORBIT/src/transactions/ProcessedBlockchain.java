@@ -1,8 +1,16 @@
 package transactions;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class ProcessedBlockchain {
+public class ProcessedBlockchain implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -7810429571010390645L;
+	/**
+	 * 
+	 */
 	private ArrayList<Transaction> transaction;
 	
 	public ProcessedBlockchain() {
@@ -16,5 +24,9 @@ public class ProcessedBlockchain {
 		t.setPosition(transaction.size());
 		transaction.add(t);
 		
+	}
+
+	public int size() {
+		return transaction.size();
 	}
 }

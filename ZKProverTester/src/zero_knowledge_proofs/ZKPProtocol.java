@@ -624,35 +624,24 @@ public abstract class ZKPProtocol{
 	 * @throws NoTrueProofException 
 	 */
 	public CryptoData[] proveFiatShamir(CryptoData publicInput, CryptoData secrets, CryptoData environment) throws IOException, ClassNotFoundException, MultipleTrueProofException, NoTrueProofException, ArraySizesDoNotMatchException {
-		try {
-			CryptoData a = initialComm(publicInput, secrets, environment);
-			MessageDigest digest = MessageDigest.getInstance("SHA-256");
-			byte[][] bytes = new byte[][] {a.getBytes(),environment.getBytes(),publicInput.getBytes()};
-			
-			BigInteger c = new BigInteger(digest.digest(Arrays.concatenate(bytes))).mod(BigInteger.ONE.shiftLeft(255));
-			CryptoData z = calcResponse(publicInput, secrets, c, environment);
-			return new CryptoData[] {a, z};
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-			return null;
-		}
+		
+		CryptoData a = initialComm(publicInput, secrets, environment);
+		byte[][] bytes = new byte[][] {a.getBytes(),environment.getBytes(),publicInput.getBytes()};
+		
+		BigInteger c = fiatShamirChallange(publicInput, a, environment);
+		CryptoData z = calcResponse(publicInput, secrets, c, environment);
+		return new CryptoData[] {a, z};
 	}
 	/**
 	 * Creates Fiat Shamir challenge
 	 * 
 	 * @param input Whatever inputs are required for the challenge
 	 * @return The challenge
-	 * @throws IOException 
-	 * @throws ClassNotFoundException 
-	 * @throws MultipleTrueProofException 
-	 * @throws ArraySizesDoNotMatchException 
-	 * @throws NoTrueProofException 
 	 */
-	public BigInteger fiatShamirChallange(CryptoData publicInput, CryptoData a, CryptoData environment) throws MultipleTrueProofException, NoTrueProofException, ArraySizesDoNotMatchException {
+	public BigInteger fiatShamirChallange(CryptoData publicInput, CryptoData a, CryptoData environment) {
 		try {
 			MessageDigest digest = MessageDigest.getInstance("SHA-256");
 			byte[][] bytes = new byte[][] {a.getBytes(),environment.getBytes(),publicInput.getBytes()};
-
 			BigInteger c = new BigInteger(digest.digest(Arrays.concatenate(bytes))).mod(BigInteger.ONE.shiftLeft(255));
 			return c;
 		} catch (NoSuchAlgorithmException e) {
@@ -677,21 +666,16 @@ public abstract class ZKPProtocol{
 	 * @throws NoTrueProofException 
 	 */
 	public boolean verifyFiatShamir(CryptoData publicInput, CryptoData a, CryptoData z, CryptoData environment) throws IOException, ClassNotFoundException, MultipleTrueProofException, NoTrueProofException, ArraySizesDoNotMatchException {
-		try {
-			MessageDigest digest = MessageDigest.getInstance("SHA-256");
-			if(a == null || environment == null || publicInput == null) {
-				System.out.println(a);
-				System.out.println(environment);
-				System.out.println(publicInput);
-				System.out.println();
-			}
-			byte[][] bytes = new byte[][] {a.getBytes(),environment.getBytes(),publicInput.getBytes()};
-			BigInteger c = new BigInteger(digest.digest(Arrays.concatenate(bytes))).mod(BigInteger.ONE.shiftLeft(255));
-			
-			return verifyResponse(publicInput, a, z, c, environment);
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-			return false;
+		
+		if(a == null || environment == null || publicInput == null) {
+			System.out.println(a);
+			System.out.println(environment);
+			System.out.println(publicInput);
+			System.out.println();
 		}
+		byte[][] bytes = new byte[][] {a.getBytes(),environment.getBytes(),publicInput.getBytes()};
+		BigInteger c = fiatShamirChallange(publicInput, a, environment);
+		
+		return verifyResponse(publicInput, a, z, c, environment);
 	}
 }
