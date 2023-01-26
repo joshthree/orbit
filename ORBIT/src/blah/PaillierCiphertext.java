@@ -5,6 +5,8 @@ import java.security.SecureRandom;
 import java.util.InputMismatchException;
 import java.util.Random;
 
+import org.bouncycastle.math.ec.ECCurve;
+
 import zero_knowledge_proofs.CryptoData.BigIntData;
 import zero_knowledge_proofs.CryptoData.CryptoData;
 import zero_knowledge_proofs.CryptoData.CryptoDataArray;
@@ -90,13 +92,13 @@ public class PaillierCiphertext extends AdditiveCiphertext{
 	@Override
 	public CryptoData[] getRerandomizationProverData(AdditiveCiphertext original, BigInteger ephemeral,
 			SecureRandom rand, Additive_Pub_Key pub) {
-		// TODO Auto-generated method stub
-		return null;
+		AdditiveCiphertext proofCipher = this.homomorphicAdd(original.negate(pub), pub);
+		return proofCipher.getEncryptionProverData(BigInteger.ZERO, ephemeral, rand, pub);
 	}
 	@Override
 	public CryptoData[] getRerandomizationVerifierData(AdditiveCiphertext original, Additive_Pub_Key pub) {
 		// TODO Auto-generated method stub
-		return null;
+		return this.homomorphicAdd(original.negate(pub), pub).getEncryptionVerifierData(BigInteger.ZERO, pub);
 	}
 
 	@Override

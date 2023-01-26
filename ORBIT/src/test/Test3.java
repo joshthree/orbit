@@ -38,7 +38,7 @@ import transactions.RegistrationTransaction;
 import transactions.SourceTransaction;
 
 public class Test3 {
-	public static void main2(String arg[]) {
+	public static void main(String arg[]) {
 		int numRaces = 5;
 		int numCandidates = 4;
 		int numVotes = 20;

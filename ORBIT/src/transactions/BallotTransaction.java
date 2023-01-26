@@ -1930,6 +1930,7 @@ public class BallotTransaction implements VoterTransaction {
 			}
 			for(int j = 0; j < election.getNumRace(); j++) {
 				inner[0] = originalTables[i][0].output1[j].getVerificationDataRandomizationProof(orig[0].output1[j], election.getRace(j).getPubKey());
+//				System.out.println(orig[0].output1[j]);
 				inner[1] = originalTables[i][1].output1[j].getVerificationDataRandomizationProof(orig[1].output1[j], election.getRace(j).getPubKey());
 				innerPub[j][0] = inner[0][0];
 				innerEnv[j][0] = inner[0][1];
