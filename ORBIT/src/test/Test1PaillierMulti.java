@@ -12,7 +12,7 @@ import election.EncryptedVote;
 import election.Race;
 import election.VoterDecision;
 import election.multiCipherSVHNw.SVHNwRaceMulti;
-import election.multiCipherSVHNw.SVHNwVoterDecisionMulti;
+import election.singleCipherSVHNw.SVHNwVoterDecision;
 
 public class Test1PaillierMulti {
 	public static void main(String arg[]) {
@@ -27,7 +27,7 @@ public class Test1PaillierMulti {
 		Race race1 = new SVHNwRaceMulti (null, numCandidates, pub);
 		VoterDecision[] vote = new VoterDecision[numCandidates+1];
 		for (int i = 0; i <= numCandidates; i++) {
-			vote[i] = new SVHNwVoterDecisionMulti(i);
+			vote[i] = new SVHNwVoterDecision(i);
 		}
 //		EncryptedVote[] bigPsi = new EncryptedVote[numCandidates+1];
 //		for (int i = 0; i <= numCandidates; i++) {

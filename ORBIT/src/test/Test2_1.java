@@ -13,6 +13,8 @@ import java.math.BigInteger;
 import java.net.Socket;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 
 import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
@@ -38,12 +40,12 @@ import transactions.RegistrationTransaction;
 import transactions.SourceTransaction;
 
 public class Test2_1 {
-	public static void main(String arg[]) {
-		int numRaces = 5;
-		int numCandidates = 4;
-		int numVotes = 7;
-		int miners = 10;
-		int ringSize = 5;
+	public static void main2(String arg[]) {
+		int numRaces = Integer.parseInt(arg[0]);
+		int numCandidates = Integer.parseInt(arg[1]);
+		int numVotes = Integer.parseInt(arg[2]);
+		int miners = Integer.parseInt(arg[3]);
+		int ringSize = Integer.parseInt(arg[4]);
 		//SecureRandom rand = new SecureRandom("fhdjkghqeriupgyqhkdlvdjchlzvkcjxvbfiuhagperidfhgkhfdspogieqrjl".getBytes());
 		SecureRandom rand = new SecureRandom();
 		
@@ -66,6 +68,11 @@ public class Test2_1 {
 		for (int i = 0; i < numRaces; i++) {
 			races[i] = new SVHNwRace("sfgsdf", numCandidates, pub, bitSeparation);
 		}
+		runElection(numRaces, numCandidates, numVotes, miners, ringSize, rand, c, g, races);
+	}
+
+	public static void runElection(int numRaces, int numCandidates, int numVotes, int miners, int ringSize,
+			SecureRandom rand, ECCurve c, ECPoint g, Race[] races) {
 		AdditiveElgamalPrivKey[] minerPrivKeys = new AdditiveElgamalPrivKey[miners];
 		AdditiveElgamalPubKey minerKey = new AdditiveElgamalPubKey(g, c.getInfinity());
 		
@@ -100,15 +107,35 @@ public class Test2_1 {
 			}
 			//Run vote function with the array.
 			encryptedVotes[i] = election.vote(voterDecisions[i], rand);
+			
 		}
 		
 		long start1 = System.currentTimeMillis();
+		
+		ByteArrayOutputStream out1 = new ByteArrayOutputStream();
+		try {
+			ObjectOutput out2 = new ObjectOutputStream(out1);
+			out2.writeObject(encryptedVotes);
+			System.out.printf("%d, ", out1.toByteArray().length);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
 
 		for (int i = 0; i < numVotes; i++) {
 			encryptedVotes[i] = election.proveVote(encryptedVotes[i], voterDecisions[i], rand);
 		}
 		
 		long start2 = System.currentTimeMillis();
+		
+		out1 = new ByteArrayOutputStream();
+		try {
+			ObjectOutput out2 = new ObjectOutputStream(out1);
+			out2.writeObject(encryptedVotes);
+			System.out.printf("%d, ", out1.toByteArray().length);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		
 		
 		boolean verified = true;
@@ -138,6 +165,16 @@ public class Test2_1 {
 		BallotTransaction[] ballots = Test2_1.createTransactions(election, encryptedVotes, blockchain, ringSize, rand);
 
 		long start4 = System.currentTimeMillis();
+		
+		out1 = new ByteArrayOutputStream();
+		try {
+			ObjectOutput out2 = new ObjectOutputStream(out1);
+			out2.writeObject(ballots);
+			System.out.printf("%d, ", out1.toByteArray().length);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
 		System.out.printf("%d \n", start4-start3);
 //		ObjectInputStream[][] in = new ObjectInputStream[miners][miners];
 //		ObjectOutputStream[][] out = new ObjectOutputStream[miners][miners];
@@ -238,15 +275,16 @@ public class Test2_1 {
 		ECPoint g = spec.getG();
 		BigInteger order = curve.getOrder();
 
-		AdditiveElgamalPrivKey[][] voterPriv = new AdditiveElgamalPrivKey[encryptedVotes.length][2];
-		BigInteger[][] passwords = new BigInteger[encryptedVotes.length][3];
-		AdditiveElgamalCiphertext[] passwordCiphers = new AdditiveElgamalCiphertext[encryptedVotes.length];
+		int numReg = Math.max(encryptedVotes.length, ringSize);
+		AdditiveElgamalPrivKey[][] voterPriv = new AdditiveElgamalPrivKey[numReg][2];
+		BigInteger[][] passwords = new BigInteger[numReg][3];
+		AdditiveElgamalCiphertext[] passwordCiphers = new AdditiveElgamalCiphertext[numReg];
 		
-		RegistrationTransaction[] registration = new RegistrationTransaction[encryptedVotes.length];
+		RegistrationTransaction[] registration = new RegistrationTransaction[numReg];
 		
 		ElectionTransaction electionTx = new ElectionTransaction(election);
 		blockchain.addTransaction(electionTx);
-		for(int i = 0; i < encryptedVotes.length; i++) {
+		for(int i = 0; i < encryptedVotes.length || i < ringSize; i++) {
 			voterPriv[i][0] = new AdditiveElgamalPrivKey(g, rand);
 			voterPriv[i][1] = new AdditiveElgamalPrivKey(g, rand);
 
@@ -261,61 +299,57 @@ public class Test2_1 {
 			registration[i] = new RegistrationTransaction((AdditiveElgamalPubKey) voterPriv[i][0].getPubKey(), passwordCiphers[i], rand);
 			blockchain.addTransaction(registration[i]);
 		}
+		
 
 
 		
 		
-		BallotTransaction[] ballots = new BallotTransaction[encryptedVotes.length+1];
+		BallotTransaction[] ballots = new BallotTransaction[encryptedVotes.length];
 
 		long time3 = System.currentTimeMillis();
+		HashMap<Integer, Boolean> map = new HashMap<Integer, Boolean>();
 		for(int i = 0; i < encryptedVotes.length; i++) {
+			map.clear();
 			int sourcePos = rand.nextInt(ringSize);
 			SourceTransaction[] ring = new SourceTransaction[ringSize];
 			ring[sourcePos] = registration[i];
-			ArrayList<Integer> ringMembers = new ArrayList<Integer>();
-			ringMembers.add(i);
+			map.put(i, true);
 			for(int j = 0; j < ringSize; j++) {
 				if(j == sourcePos) continue;
 				Integer mixin;
 				do {
 					mixin = rand.nextInt(registration.length);
-				} while(ringMembers.contains(mixin));
-				
-				ringMembers.add(mixin);
+				} while(map.containsKey(mixin));
+				map.put(mixin, true);
 				ring[j] = registration[mixin];
-				
 			}
+			map.clear();
 			ballots[i] = new BallotTransaction(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
-		}
-		int last = encryptedVotes.length;
-		int sourcePos = rand.nextInt(ringSize);
-		SourceTransaction[] ring = new SourceTransaction[ringSize];
-		ring[sourcePos] = registration[0];
-		ArrayList<Integer> ringMembers = new ArrayList<Integer>();
-		ringMembers.add(0);
-		for(int j = 0; j < ringSize; j++) {
-			if(j == sourcePos) continue;
-			Integer mixin;
-			do {
-				mixin = rand.nextInt(registration.length);
-			} while(ringMembers.contains(mixin));
-			
-			ringMembers.add(mixin);
-			ring[j] = registration[mixin];
-			
-		}
-		ballots[last] = new BallotTransaction(ring, sourcePos, voterPriv[0][0], new AdditiveElgamalPrivKey(g, rand), passwords[0][0].add(BigInteger.ONE), passwords[0][1], electionTx, encryptedVotes[0], passwords[0][2], rand);
 
-		BallotTransaction[] ballots2 = new BallotTransaction[encryptedVotes.length+1];
-		for(int i = 0; i < ballots2.length; i++) {
-			ballots2[(i+1)%ballots2.length] = ballots[i];
 		}
+//		int last = encryptedVotes.length;
+//		int sourcePos = rand.nextInt(ringSize);
+//		SourceTransaction[] ring = new SourceTransaction[ringSize];
+//		ring[sourcePos] = registration[0];
+//		ArrayList<Integer> ringMembers = new ArrayList<Integer>();
+//		ringMembers.add(0);
+//		for(int j = 0; j < ringSize; j++) {
+//			if(j == sourcePos) continue;
+//			Integer mixin;
+//			do {
+//				mixin = rand.nextInt(registration.length);
+//			} while(ringMembers.contains(mixin));
+//			
+//			ringMembers.add(mixin);
+//			ring[j] = registration[mixin];
+//			
+//		}
 		
 
 		
 		long time4 = System.currentTimeMillis();
-		for(int i = 0; i < ballots2.length; i++) {
-			if(!ballots2[i].verifyTransaction(blockchain))
+		for(int i = 0; i < ballots.length; i++) {
+			if(!ballots[i].verifyTransaction(blockchain))
 			{
 				System.out.println("NOOOOO");
 			}
@@ -324,6 +358,6 @@ public class Test2_1 {
 
 		long time5 = System.currentTimeMillis();
 		System.out.printf("%d, %d, ", time4 - time3, time5 - time4);
-		return ballots2;
+		return ballots;
 	}
 }

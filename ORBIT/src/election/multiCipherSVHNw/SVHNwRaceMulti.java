@@ -17,6 +17,8 @@ import election.EncryptedVote;
 import election.Race;
 import election.RaceResults;
 import election.VoterDecision;
+import election.singleCipherSVHNw.SVHNwEncryptedVote;
+import election.singleCipherSVHNw.SVHNwVoterDecision;
 import zero_knowledge_proofs.ArraySizesDoNotMatchException;
 import zero_knowledge_proofs.MultipleTrueProofException;
 import zero_knowledge_proofs.NoTrueProofException;
@@ -48,7 +50,7 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 	public EncryptedVote vote(VoterDecision v, SecureRandom rand) {
 		BigInteger order = raceKey.getOrder();
 		
-		SVHNwVoterDecisionMulti v2 = (SVHNwVoterDecisionMulti)v;
+		SVHNwVoterDecision v2 = (SVHNwVoterDecision)v;
 		int vote = v2.getDecision();
 		
 		BigInteger m;//2^((v-1)*beta)
@@ -63,7 +65,7 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 			}
 		}
 
-		return new SVHNwEncryptedVoteMulti (ciphers, new CryptoDataArray(ephemerals).getCryptoDataArray());
+		return new SVHNwEncryptedVoteMulti(ciphers, new CryptoDataArray(ephemerals).getCryptoDataArray());
 	}
 	public EncryptedVote proveVote(EncryptedVote unprovenVote, VoterDecision v, SecureRandom rand) {
 		AdditiveCiphertext[] ciphers = (AdditiveCiphertext[]) unprovenVote.getCiphertext();
@@ -71,7 +73,7 @@ public class SVHNwRaceMulti implements Race{ //Single Vote Homomorphic No write-
 		
 		BigInteger order = raceKey.getOrder();
 		
-		SVHNwVoterDecisionMulti v2 = (SVHNwVoterDecisionMulti)v;
+		SVHNwVoterDecision v2 = (SVHNwVoterDecision)v;
 		int vote = v2.getDecision();
 		int bitSeparation = 2;
 		ZKPProtocol baseProof = raceKey.getZKPforProofOfEncryption();

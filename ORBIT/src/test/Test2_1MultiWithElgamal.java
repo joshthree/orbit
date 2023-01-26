@@ -15,13 +15,13 @@ import election.EncryptedVote;
 import zero_knowledge_proofs.ZKToolkit;
 
 public class Test2_1MultiWithElgamal {
-	public static void main(String arg[]) {
+	public static void main2(String arg[]) {
 		ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("secp256k1");
-		int numRaces = 5;
-		int numCandidates = 4;
-		int numVotes = 50;
-		int miners = 10;
-		int ringSize = 15;
+		int numRaces = Integer.parseInt(arg[0]);
+		int numCandidates = Integer.parseInt(arg[1]);
+		int numVotes = Integer.parseInt(arg[2]);
+		int miners = Integer.parseInt(arg[3]);
+		int ringSize = Integer.parseInt(arg[4]);
 		
 		ECCurve c = spec.getCurve();
 		ECPoint g = spec.getG();

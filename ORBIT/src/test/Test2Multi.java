@@ -11,7 +11,6 @@ import election.EncryptedVote;
 import election.Race;
 import election.VoterDecision;
 import election.multiCipherSVHNw.SVHNwRaceMulti;
-import election.multiCipherSVHNw.SVHNwVoterDecisionMulti;
 import election.singleCipherSVHNw.SVHNwVoterDecision;
 
 public class Test2Multi {
@@ -54,7 +53,7 @@ public class Test2Multi {
 			for (int j = 0; j < numRaces; j++) {
 				//Fill the array with random votes
 				int vote = rand.nextInt(numCandidates+1);
-				voterDecisions[i][j] = new SVHNwVoterDecisionMulti(vote);
+				voterDecisions[i][j] = new SVHNwVoterDecision(vote);
 				
 				//Update bdResults//Update bdResults
 				bdResults[j][vote]++; 
