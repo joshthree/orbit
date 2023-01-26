@@ -29,7 +29,9 @@ public class PaillierPubKey implements Additive_Pub_Key{
 	private transient CryptoData envZero;
 	
 	private ZKPProtocol pPoZ = new PaillierProofOfZero();
-	
+	public PaillierPubKey() {
+		
+	}
 	protected PaillierPubKey(BigInteger n, BigInteger n2, BigInteger g) {
 		this.n = n;
 		this.n2 = n2;
