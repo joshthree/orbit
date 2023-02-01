@@ -19,9 +19,9 @@ public class Test3MultiWithElgamal {
 		ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("secp256k1");
 		int numRaces = 5;
 		int numCandidates = 4;
-		int numVotes = 50;
-		int miners = 10;
-		int ringSize = 15;
+		int numVotes = 10;
+		int miners = 2;
+		int ringSize = 5;
 		
 		ECCurve c = spec.getCurve();
 		ECPoint g = spec.getG();
@@ -39,10 +39,10 @@ public class Test3MultiWithElgamal {
 		BigInteger order = c.getOrder();
 		
 		SecureRandom rand = new SecureRandom("fhdjkghqeriupgyqhkdlvdjchlzvkcjxvbfiuhagperidfhgkhfdspogieqrjl".getBytes());
+//		SecureRandom rand = new SecureRandom();
 		
 		BigInteger x = ZKToolkit.random(order, rand);
 		
-//		SecureRandom rand = new SecureRandom();
 		
 		Additive_Priv_Key priv = new AdditiveElgamalPrivKey(g, rand); 
 //		System.out.println(priv);

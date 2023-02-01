@@ -31,14 +31,17 @@ import election.Race;
 import election.VoterDecision;
 import election.singleCipherSVHNw.SVHNwRace;
 import election.singleCipherSVHNw.SVHNwVoterDecision;
-import transactions.BallotTransaction;
+import transactions.BallotT;
+import transactions.BallotTransaction1;
+import transactions.BallotTransaction2;
+import transactions.BallotTransaction3;
 import transactions.ElectionTransaction;
 import transactions.ProcessedBlockchain;
 import transactions.RegistrationTransaction;
 import transactions.SourceTransaction;
 
 public class Test3 {
-	public static void main(String arg[]) {
+	public static void main2(String arg[]) {
 		int numRaces = 5;
 		int numCandidates = 4;
 		int numVotes = 20;
@@ -136,7 +139,7 @@ public class Test3 {
 //		}
 
 		ProcessedBlockchain blockchain = new ProcessedBlockchain();
-		BallotTransaction[] ballots = Test3.createTransactions(election, encryptedVotes, blockchain, ringSize, rand);
+		BallotT[] ballots = Test3.createTransactions(election, encryptedVotes, blockchain, ringSize, rand);
 
 		long start4 = System.currentTimeMillis();
 		System.out.printf("%d, %d, %d, %d \n", start1-start0, start2-start1, start3-start2, start4-start3);
@@ -233,7 +236,7 @@ public class Test3 {
 			}
 		}
 	}
-	public static BallotTransaction[] createTransactions(Election election, EncryptedVote[][] encryptedVotes, ProcessedBlockchain blockchain, int ringSize, SecureRandom rand) {
+	public static BallotT[] createTransactions(Election election, EncryptedVote[][] encryptedVotes, ProcessedBlockchain blockchain, int ringSize, SecureRandom rand) {
 		ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("secp256k1");
 		ECCurve curve = spec.getCurve();
 		ECPoint g = spec.getG();
@@ -268,7 +271,7 @@ public class Test3 {
 
 		
 		
-		BallotTransaction[] ballots = new BallotTransaction[encryptedVotes.length+1];
+		BallotT[] ballots = new BallotT[encryptedVotes.length+1];
 
 		long time3 = System.currentTimeMillis();
 		for(int i = 0; i < encryptedVotes.length; i++) {
@@ -288,7 +291,7 @@ public class Test3 {
 				ring[j] = registration[mixin];
 				
 			}
-			ballots[i] = new BallotTransaction(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
+			ballots[i] = new BallotTransaction3(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
 		}
 		int last = encryptedVotes.length;
 		int sourcePos = rand.nextInt(ringSize);
@@ -307,9 +310,9 @@ public class Test3 {
 			ring[j] = registration[mixin];
 			
 		}
-		ballots[last] = new BallotTransaction(ring, sourcePos, voterPriv[0][0], new AdditiveElgamalPrivKey(g, rand), passwords[0][0].add(BigInteger.ONE), passwords[0][1], electionTx, encryptedVotes[0], passwords[0][2], rand);
+		ballots[last] = new BallotTransaction3(ring, sourcePos, voterPriv[0][0], new AdditiveElgamalPrivKey(g, rand), passwords[0][0].add(BigInteger.ONE), passwords[0][1], electionTx, encryptedVotes[0], passwords[0][2], rand);
 
-		BallotTransaction[] ballots2 = new BallotTransaction[encryptedVotes.length+1];
+		BallotT[] ballots2 = new BallotT[encryptedVotes.length+1];
 		for(int i = 0; i < ballots2.length; i++) {
 			ballots2[(i+1)%ballots2.length] = ballots[i];
 		}

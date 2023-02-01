@@ -14,24 +14,18 @@ public class PermutationTest {
 		int[] f2 = new int[] {7, 4, 2, 5, 1, 3, 0, 6};
 	
 		
-		Permutation p0 = new Permutation(g);
+		Permutation p0 = new Permutation(base);
 		Permutation pF = new Permutation(f);
 		Permutation pG = new Permutation(g);
 		Permutation pF2 = new Permutation(f2);
 
-		int[] temp = new int[base.length];
-		
-		for(int i = 0; i < base.length; i++) {
-			temp[i] = pF.computeInverse().rightMultiply(p0).getVector()[pG.getVector()[i]];
-		}
 
-		System.out.println(Arrays.toString(temp));
 		System.out.println(Arrays.toString(pF.computeInverse().getVector()));
 		System.out.println(Arrays.toString(pF.computeInverse().rightMultiply(p0).getVector()));
 		System.out.println(Arrays.toString(pF.computeInverse().rightMultiply(p0).rightMultiply(pG).getVector()));
+											
 		System.out.println(Arrays.toString(pF.computeInverse().rightMultiply(p0).rightMultiply(pG).getVector()));
 		System.out.println(Arrays.toString(pF2.rightMultiply(pF.computeInverse().rightMultiply(p0).rightMultiply(pG)).getVector()));
-
 		
 	}
 

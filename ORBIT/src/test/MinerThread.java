@@ -13,7 +13,7 @@ import org.bouncycastle.math.ec.ECPoint;
 
 import blah.AdditiveElgamalPrivKey;
 import blah.AdditiveElgamalPubKey;
-import transactions.BallotTransaction;
+import transactions.BallotT;
 import transactions.ProcessedBlockchain;
 import zero_knowledge_proofs.ECPedersenCommitment;
 import zero_knowledge_proofs.CryptoData.CryptoData;
@@ -22,7 +22,7 @@ import zero_knowledge_proofs.CryptoData.ECCurveData;
 import zero_knowledge_proofs.CryptoData.ECPointData;
 
 public class MinerThread implements Runnable {
-	private BallotTransaction[] votes;
+	private BallotT[] votes;
 	private ObjectOutputStream[] out;
 	private ObjectInputStream[] in;
 	private AdditiveElgamalPrivKey minerPrivKey;
@@ -48,20 +48,35 @@ public class MinerThread implements Runnable {
 	@Override
 	public void run() {
 		boolean leader = false;
-		try {
-			if(in[0] == null) {
-				leader = true;
-				blockchain = (ProcessedBlockchain) in[1].readObject();
-				votes = (BallotTransaction[]) in[1].readObject();
-//				AdditiveElgamalPubKey key = (AdditiveElgamalPubKey) in[1].readObject();
-			} else {
-				blockchain = (ProcessedBlockchain) in[0].readObject();
-				votes = (BallotTransaction[]) in[0].readObject();
-//				AdditiveElgamalPubKey key = (AdditiveElgamalPubKey) in[0].readObject();
+		if(in.length != 1) {
+			try {
+				if(in[0] == null) {
+					leader = true;
+					blockchain = (ProcessedBlockchain) in[1].readObject();
+					votes = (BallotT[]) in[1].readObject();
+	//				AdditiveElgamalPubKey key = (AdditiveElgamalPubKey) in[1].readObject();
+				} else {
+					blockchain = (ProcessedBlockchain) in[0].readObject();
+					votes = (BallotT[]) in[0].readObject();
+	//				AdditiveElgamalPubKey key = (AdditiveElgamalPubKey) in[0].readObject();
+				}
+			} catch (ClassNotFoundException | IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-		} catch (ClassNotFoundException | IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		}
+		else {
+			leader = true;
+
+			try {
+				blockchain = (ProcessedBlockchain) in[0].readObject();
+				votes = (BallotT[]) in[0].readObject();
+				in[0] = null;
+				out[0] = null;
+			} catch (ClassNotFoundException | IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		for(int i = 0; i < votes.length; i++) {
 			if(leader) System.out.println(i);
@@ -117,6 +132,9 @@ public class MinerThread implements Runnable {
 	}
 
 	public static int[] chooseOrder(ObjectInputStream[] in, ObjectOutputStream[] out, AdditiveElgamalPubKey minerKey, SecureRandom rand) {
+		if(in.length == 1) {
+			return new int[] {0};
+		}
 		ECCurve curve = minerKey.getCurve();
 		ECPoint g = minerKey.getG();
 		ECPoint y = minerKey.getY();
@@ -152,7 +170,6 @@ public class MinerThread implements Runnable {
 				if(out[i] == null) continue;
 				out[i].writeObject(myValsBytes);
 				out[i].writeObject(ped1R);
-//				System.out.println(Thread.currentThread() + " Writing to " + i + " in order");
 			}
 			for(int i = 0; i < in.length; i++) {
 				if(in[i] == null) {

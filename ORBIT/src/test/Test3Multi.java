@@ -31,7 +31,7 @@ import election.VoterDecision;
 import election.multiCipherSVHNw.SVHNwRaceMulti;
 import election.singleCipherSVHNw.SVHNwRace;
 import election.singleCipherSVHNw.SVHNwVoterDecision;
-import transactions.BallotTransaction;
+import transactions.BallotT;
 import transactions.ProcessedBlockchain;
 
 public class Test3Multi {
@@ -133,7 +133,7 @@ public class Test3Multi {
 
 		System.out.printf("%d, %d, %d, ", start1-start0, start2-start1, start3-start2);
 		ProcessedBlockchain blockchain = new ProcessedBlockchain();
-		BallotTransaction[] ballots = Test3.createTransactions(election, encryptedVotes, blockchain, ringSize, rand);
+		BallotT[] ballots = Test3.createTransactions(election, encryptedVotes, blockchain, ringSize, rand);
 		ObjectInputStream[][] in = new ObjectInputStream[miners][miners];
 		ObjectOutputStream[][] out = new ObjectOutputStream[miners][miners];
 		Socket[][] s = new Socket[miners][miners];
@@ -192,27 +192,45 @@ public class Test3Multi {
 			e.printStackTrace();
 		}
 		System.err.println("End Test Writing Blockchain");
-		for(int i = 0; i < miners; i++) {
-			try {
-				if(i == 0) {
-					
-//					out[1][i].writeObject(minerKey);
-					out[1][i].writeObject(blockchain);
-					out[1][i].flush();
-					out[1][i].reset();
-					out[1][i].writeObject(ballots);
-					out[1][i].flush();
-					out[1][i].reset();
-				} else {
-//					out[0][i].writeObject(minerKey);
-					out[0][i].writeObject(blockchain);
-					out[0][i].flush();
-					out[0][i].reset();
-					out[0][i].writeObject(ballots);
-					out[0][i].flush();
-					out[0][i].reset();
+		if(miners != 1) {
+			for(int i = 0; i < miners; i++) {
+				try {
+					if(i == 0) {
+						
+	//					out[1][i].writeObject(minerKey);
+						out[1][i].writeObject(blockchain);
+						out[1][i].flush();
+						out[1][i].reset();
+						out[1][i].writeObject(ballots);
+						out[1][i].flush();
+						out[1][i].reset();
+					} else {
+	//					out[0][i].writeObject(minerKey);
+						out[0][i].writeObject(blockchain);
+						out[0][i].flush();
+						out[0][i].reset();
+						out[0][i].writeObject(ballots);
+						out[0][i].flush();
+						out[0][i].reset();
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
 				}
+			}
+		} else {
+			try {
+				PipedInputStream pIn = new PipedInputStream(3000000);
+				PipedOutputStream pOut = new PipedOutputStream(pIn);
+				out[0][0] = new ObjectOutputStream(pOut);
+				in[0][0] = new ObjectInputStream(pIn);
+				out[0][0].writeObject(blockchain);
+				out[0][0].flush();
+				out[0][0].reset();
+				out[0][0].writeObject(ballots);
+				out[0][0].flush();
+				out[0][0].reset();
 			} catch (IOException e) {
+				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
