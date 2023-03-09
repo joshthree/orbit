@@ -1,5 +1,7 @@
 package test;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 
@@ -16,6 +18,7 @@ import zero_knowledge_proofs.ZKToolkit;
 
 public class Test3MultiWithElgamal {
 	public static void main(String arg[]) {
+		System.out.println(ManagementFactory.getThreadMXBean().isThreadCpuTimeSupported());
 		ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("secp256k1");
 		int numRaces = 5;
 		int numCandidates = 4;

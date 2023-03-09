@@ -3,6 +3,8 @@ package test;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
@@ -30,7 +32,7 @@ public class MinerThread implements Runnable {
 	private boolean pass;
 	private AdditiveElgamalPubKey[] individualMinerKeys;
 	private ProcessedBlockchain blockchain;
-	
+	public long cpuTime;
 	public MinerThread(AdditiveElgamalPrivKey minerPrivKey, AdditiveElgamalPubKey[] individualMinerKeys, ObjectInputStream[] in, ObjectOutputStream[] out) {
 
 		this.out = out;
@@ -47,6 +49,8 @@ public class MinerThread implements Runnable {
 	
 	@Override
 	public void run() {
+		ThreadMXBean threadTracker = ManagementFactory.getThreadMXBean();
+		threadTracker.setThreadCpuTimeEnabled(true);
 		boolean leader = false;
 		if(in.length != 1) {
 			try {
@@ -85,6 +89,7 @@ public class MinerThread implements Runnable {
 			blockchain.addTransaction(votes[i]);
 		}
 		if(leader) System.out.println(System.currentTimeMillis() - start);
+		cpuTime = threadTracker.getCurrentThreadCpuTime();
 	}
 	public static int voteOnValue(int modulus, ObjectInputStream[] in, ObjectOutputStream[] out, AdditiveElgamalPubKey minerKey,
 			SecureRandom rand) {

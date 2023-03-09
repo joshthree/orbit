@@ -223,6 +223,7 @@ public class Test3 {
 				e.printStackTrace();
 			}
 		}
+		
 		for(int i = 0; i < miners; i++) {
 			minerThread[i] = new Thread(new MinerThread(minerPrivKeys[i], individualMinerKeys, in[i], out[i]));
 			minerThread[i].start();
@@ -235,6 +236,7 @@ public class Test3 {
 				e.printStackTrace();
 			}
 		}
+		
 	}
 	public static BallotT[] createTransactions(Election election, EncryptedVote[][] encryptedVotes, ProcessedBlockchain blockchain, int ringSize, SecureRandom rand) {
 		ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("secp256k1");

@@ -9,6 +9,8 @@ import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.security.SecureRandom;
@@ -234,17 +236,22 @@ public class Test3Multi {
 				e.printStackTrace();
 			}
 		}
+		MinerThread[] minerThreadDriver = new MinerThread[miners];
 		for(int i = 0; i < miners; i++) {
-			minerThread[i] = new Thread(new MinerThread(minerPrivKeys[i], individualMinerKeys, in[i], out[i]));
+			minerThreadDriver[i] = new MinerThread(minerPrivKeys[i], individualMinerKeys, in[i], out[i]);
+			minerThread[i] = new Thread(minerThreadDriver[i]);
 			minerThread[i].start();
 		}
+		long cpuTime = 0;
 		for(int i = 0; i < miners; i++) {
 			try {
 				minerThread[i].join();
+				cpuTime += minerThreadDriver[i].cpuTime;
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
+		System.out.println(cpuTime);
 	}
 }
