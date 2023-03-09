@@ -18,7 +18,9 @@ public class ElectionTableRowInner implements Serializable {
 	
 	public ElectionTableRowInner(AdditiveCiphertext compare, EncryptedVote[] output1, AdditiveCiphertext output2) {
 		this.compare = compare;
-		this.output1 = output1.clone();
+		if(output1 != null) {
+			this.output1 = output1.clone();
+		}
 		this.output2 = output2;
 	}
 	

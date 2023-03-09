@@ -32,7 +32,6 @@ import zero_knowledge_proofs.ECDummyBallot10bProver;
 import zero_knowledge_proofs.ECDummyBallot10dProver;
 import zero_knowledge_proofs.ECEqualDiscreteLogsForAnyNumberProver;
 import zero_knowledge_proofs.ECEqualDiscreteLogsProver;
-import zero_knowledge_proofs.ECPedersenCommitment;
 import zero_knowledge_proofs.ECSchnorrCombinations;
 import zero_knowledge_proofs.MultipleTrueProofException;
 import zero_knowledge_proofs.NoTrueProofException;
@@ -45,7 +44,7 @@ import zero_knowledge_proofs.CryptoData.CryptoDataArray;
 import zero_knowledge_proofs.CryptoData.ECCurveData;
 import zero_knowledge_proofs.CryptoData.ECPointData;
 
-public class BallotTransaction3_1 implements BallotT {
+public class BallotTransaction4 implements BallotT {
 
 	/**
 	 * 
@@ -94,7 +93,7 @@ public class BallotTransaction3_1 implements BallotT {
 	private CryptoData[][] passwordTableDecryptTranscript;
 	private AdditiveElgamalCiphertext[] passwordInputsDecrypted;
 
-	public BallotTransaction3_1(SourceTransaction[] ringMembers, int source, Additive_Priv_Key signingKey, Additive_Priv_Key newKey, BigInteger passwordGuess, BigInteger passwordDisplacement, ElectionTransaction electionTx, EncryptedVote[] votes, BigInteger passwordRandomization, SecureRandom rand){
+	public BallotTransaction4(SourceTransaction[] ringMembers, int source, Additive_Priv_Key signingKey, Additive_Priv_Key newKey, BigInteger passwordGuess, BigInteger passwordDisplacement, ElectionTransaction electionTx, EncryptedVote[] votes, BigInteger passwordRandomization, SecureRandom rand){
 		super();
 		Election election = electionTx.getElection();
 		electionPos = electionTx.getPosition();
@@ -867,7 +866,7 @@ public class BallotTransaction3_1 implements BallotT {
 		do {
 			tableOmega = null;
 			retry = false;
-			AdditiveCiphertext[][] table2 = shuffleInternal(table1, 5, in, out, minerKey, rand);
+			AdditiveCiphertext[][] table2 = shuffleInternal(table1, in, out, minerKey, rand);
 			if(table2 == null) {
 				return false;
 			}
@@ -882,7 +881,7 @@ public class BallotTransaction3_1 implements BallotT {
 			table3[abbridgedRowCount-1][1] = minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO);
 			table3[abbridgedRowCount-1][2] = minerKey.encrypt(BigInteger.ONE, BigInteger.ZERO);
 
-			AdditiveCiphertext[][] table4 = shuffleInternal(table3, 5, in, out, minerKey, rand);
+			AdditiveCiphertext[][] table4 = shuffleInternal(table3, in, out, minerKey, rand);
 
 			if(table4 == null) return false;
 
@@ -905,7 +904,6 @@ public class BallotTransaction3_1 implements BallotT {
 							if(out[k] == null) continue;
 							try {
 								out[k].writeObject(testNew);
-								out[k].flush();
 							} catch (IOException e) {
 								// TODO Auto-generated catch block
 								e.printStackTrace();
@@ -2316,7 +2314,7 @@ public class BallotTransaction3_1 implements BallotT {
 		return fullProofData;
 	}
 
-	private AdditiveCiphertext[][] shuffleInternal(AdditiveCiphertext[][] table1, int numTrials, ObjectInputStream[] in,
+	private AdditiveCiphertext[][] shuffleInternal(AdditiveCiphertext[][] table1, ObjectInputStream[] in,
 			ObjectOutputStream[] out, AdditiveElgamalPubKey minerKey, SecureRandom rand) {
 		int rows = table1.length;
 		int cols = table1[0].length;
@@ -2325,342 +2323,131 @@ public class BallotTransaction3_1 implements BallotT {
 		ECPoint g = minerKey.getG();
 		ECPoint y = minerKey.getY();
 		int[] order = MinerThread.chooseOrder(in, out, minerKey, rand);
-		AdditiveCiphertext[][][] table2s = new AdditiveCiphertext[2][][];
-		//commit to challenge
-		BigInteger challenge = new BigInteger(numTrials, rand);
-		BigInteger ephemeral = minerKey.generateEphemeral(rand);
-		
-		CryptoData env = new CryptoDataArray(new CryptoData[] {new ECCurveData(curve, g), new ECPointData(y)});
-		
-		ECPedersenCommitment challengeCom = new ECPedersenCommitment(challenge, ephemeral, env);
-		for(int i = 0; i < out.length; i++) {
-			if(out[i] != null) {
-				try {
-					out[i].writeObject(challengeCom);
-					out[i].flush();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		}
-		for(int i = 0; i < in.length; i++) {
-			if(in[i] != null) {
-				try {
-					ECPedersenCommitment otherChal = (ECPedersenCommitment) in[i].readObject();
-					challengeCom = challengeCom.multiplyCommitment(otherChal, env);
-				} catch (IOException | ClassNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		}
+		AdditiveCiphertext[][][] table2s = new AdditiveCiphertext[in.length][][];
 
-//		ZKPProtocol proof1 = getInternalShuffleProof(table1, minerKey);
+		ZKPProtocol proof1 = getInternalShuffleProof(table1, minerKey);
 		//		Thread[] verifiers = new Thread[in.length];
 		//		ParallelVerifier[] verifierObs = new ParallelVerifier[in.length];
-		int myPos = -1;
-		if(in[order[0]] == null) {
-			table2s[0] = table1;
-			myPos = 0;
-		} else {
-			for(int i = 1; i < order.length; i++) {
-				if(in[order[i]] == null) {
-					try {
-						table2s[0] = (AdditiveCiphertext[][]) in[order[i-1]].readObject();
-					} catch (ClassNotFoundException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}		
-					myPos = i;
-					break;
-				}
-			}
-		}
-		int[] mainShuffle = new int[rows];
-		BigInteger[][] mainEphemerals = new BigInteger[rows][cols];
-		for(int k = 0; k < rows; k++) {
-			mainShuffle[k] = k;
-		}
-		for(int k = 0; k < rows-1; k++) {
-			int randIndex = rand.nextInt(rows-k) + k;
-			int temp = mainShuffle[randIndex];
-			mainShuffle[randIndex] = mainShuffle[k];
-			mainShuffle[k] = temp;
-		}
-		table2s[1] = new AdditiveElgamalCiphertext[rows][cols];
-		for(int k = 0; k < rows; k++) {
-			for(int k2 = 0; k2 < cols; k2++) {
-				mainEphemerals[k][k2] = minerKey.generateEphemeral(rand);
-				table2s[1][mainShuffle[k]][k2] = table2s[0][k][k2].rerandomize(mainEphemerals[k][k2], minerKey);
-				
-			}
-		}
-		
-		if(myPos == order.length-1) {
-			for(int i = 0; i < out.length; i++) {
-				if(i == myPos) continue;
-				try {
-					out[order[i]].writeObject(table2s[1]);
-					out[order[i]].flush();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		} else {
-			try {
-				out[(order[myPos+1])].writeObject(table2s[1]);
-				out[(order[myPos+1])].flush();
-				table2s[1] = (AdditiveCiphertext[][]) in[order[order.length-1]].readObject();
-				
-			} catch (IOException | ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		
-
-		AdditiveCiphertext[][][] sourceOtherTables = null;
-		if(myPos == 0) {
-			table2s[0] = table1;
-			sourceOtherTables = new AdditiveCiphertext[numTrials][][];
-			for(int i = 0; i < numTrials; i++) {
-				sourceOtherTables[i] = table2s[1];
-			}
-		} else {
-			try {
-				sourceOtherTables = (AdditiveCiphertext[][][]) in[order[myPos-1]].readObject();
-			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}			
-		}
-		table2s[0] = table1;
-		
-		int[][][] shuffle = new int[numTrials][2][rows];
-		for(int j = 0; j < numTrials; j++) {
-			for(int k = 0; k < rows; k++) {
-				shuffle[j][1][k] = k;
-			}
-		}
-		AdditiveCiphertext[][][] otherTables = new AdditiveElgamalCiphertext[numTrials][rows][cols];
-		for(int j = 0; j < numTrials; j++) {
-			for(int k = 0; k < rows-1; k++) {
-				int randIndex = rand.nextInt(rows-k) + k;
-				int temp = shuffle[j][1][randIndex];
-				shuffle[j][1][randIndex] = shuffle[j][1][k];
-				shuffle[j][1][k] = temp;
-			}
-		}
-
-		BigInteger[][][][] ephemerals = new BigInteger[numTrials][2][rows][cols];
-		
-		
-
-		for(int j = 0; j < numTrials; j++) {
-			for(int k = 0; k < rows; k++) {
-				shuffle[j][0][k] = shuffle[j][1][mainShuffle[k]];
-			}
-		}
-		for(int j = 0; j < numTrials; j++) {
-			for(int k = 0; k < rows; k++) {
-				for(int k2 = 0; k2 < cols; k2++) {
-					ephemerals[j][1][mainShuffle[k]][k2] = minerKey.generateEphemeral(rand);
-					ephemerals[j][0][k][k2] = ephemerals[j][1][mainShuffle[k]][k2].add(mainEphemerals[k][k2]).mod(minerKey.getOrder());
-					otherTables[j][shuffle[j][1][mainShuffle[k]]][k2] = sourceOtherTables[j][mainShuffle[k]][k2].rerandomize(ephemerals[j][1][mainShuffle[k]][k2], minerKey);
-					
-					
-				}
-			}
-		}
-		for(int j = 0; j < numTrials; j++) {
-			System.out.println(java.util.Arrays.toString(mainShuffle));
-			System.out.println(java.util.Arrays.toString(shuffle[j][0]));
-			System.out.println(java.util.Arrays.toString(shuffle[j][1]));
-			for(int k = 0; k < rows; k++) {
-				int k2 = 0;
-//				System.out.println();
-//				System.out.println("reygiuhfdslkgjhrwigrphlkjfdsgbijwsbn " + table2s[0][k][k2].rerandomize(ephemerals[j][0][k][k2], minerKey).getCipher(minerKey).equals(otherTables[j][shuffle[j][0][k]][k2].getCipher(minerKey)) + " " + k);
-//				System.out.println("543yrwhgfshtrwyrtyrthgfdhgdfhgfdhgfd " + table2s[1][k][k2].rerandomize(ephemerals[j][1][k][k2], minerKey).getCipher(minerKey).equals(otherTables[j][shuffle[j][1][k]][k2].getCipher(minerKey)));
-
-
-				
-			}
-		}
-		//				System.out.println(java.util.Arrays.toString(shuffle));
-		if(myPos == order.length-1) {
-			for(int i = 0; i < out.length; i++) {
-				if(i == myPos) continue;
-				try {
-					out[order[i]].writeObject(otherTables);
-					out[order[i]].flush();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		} else {
-			try {
-				out[(order[myPos+1])].writeObject(otherTables);
-				out[(order[myPos+1])].flush();
-				otherTables = (AdditiveCiphertext[][][]) in[order[order.length-1]].readObject();
-				
-			} catch (IOException | ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		table2s[0] = table1;
-
-		for(int i = 0; i < out.length; i++) {
-			if(out[i] != null) {
-				try {
-					out[i].writeObject(challenge);
-					out[i].writeObject(ephemeral);
-					out[i].flush();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		}
+		table2s[order[order.length-1]] = table1;
 		for(int i = 0; i < in.length; i++) {
-			if(in[i] != null) {
-				try {
-					challenge = ((BigInteger) in[i].readObject()).add(challenge);
-					ephemeral = ((BigInteger) in[i].readObject()).add(ephemeral).mod(curve.getOrder());
-				} catch (IOException | ClassNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		}
-		if(!challengeCom.verifyCommitment(challenge, ephemeral, env)) {
-			System.out.println("Bad Challenge!");
-			return null;
-		}
-		challenge = challenge.mod(BigInteger.ONE.shiftLeft(numTrials));
-		for(int i = 0; i < numTrials; i++) {
-			AdditiveCiphertext[][] sourceTable;
-			AdditiveCiphertext[][] destTable;
-			int bit;
-			if(challenge.testBit(i) || true) {
-				bit = 1;
-				sourceTable = table2s[1];
-				destTable = otherTables[i];
+			int index = order[i];
+			int prev;
+			if(i == 0) {
+				prev = order[order.length-1];
 			} else {
-				bit = 0;
-				sourceTable = table2s[0];
-				destTable = otherTables[i];
+				prev = order[i-1];
 			}
-			for(int j = 0; j < out.length; j++) {
-				if(out[j] != null) {
+			if(in[index] == null) {
+				System.out.println("My turn:  " + index);
+				int[] shuffle = new int[rows];
+				for(int k = 0; k < rows; k++) {
+					shuffle[k] = k;
+				}
+				table2s[index] = new AdditiveElgamalCiphertext[rows][cols];
+				for(int k = 0; k < rows-1; k++) {
+					int randIndex = rand.nextInt(rows-k) + k;
+					int temp = shuffle[randIndex];
+					shuffle[randIndex] = shuffle[k];
+					shuffle[k] = temp;
+				}
+				BigInteger[][] ephemerals = new BigInteger[rows][cols];
+				for(int k = 0; k < rows; k++) {
+					for(int k2 = 0; k2 < cols; k2++) {
+						ephemerals[k][k2] = minerKey.generateEphemeral(rand);
+						table2s[index][k][k2] = table2s[prev][shuffle[k]][k2].rerandomize(ephemerals[k][k2], minerKey);
+					}
+				}
+				//				System.out.println(java.util.Arrays.toString(shuffle));
+				CryptoData[] proverData = getInternalShuffleProverData(table2s[index], table2s[prev], ephemerals, shuffle, minerKey, rand);
+				CryptoData[] proofTranscript = null;
+				try {
+					proofTranscript = proof1.proveFiatShamir(proverData[0], proverData[1], proverData[2]);
+					//					CryptoData[] verifierData = getInternalShuffleVerifierData(table2s[index], table2s[prev], minerKey);
+					//					if(verifierData[0].equals(proverData[0])) System.out.println("equal 1");
+					//					else {
+					//						System.out.println("not equal 1");
+					//						System.out.println("v = " + verifierData[0]);
+					//						System.out.println("p = " + proverData[0]);
+					//					}
+					//					
+					//					if(verifierData[1].equals(proverData[2])) System.out.println("equal 2");
+					//					else System.out.println("not equal 2");
+					//					System.out.println(proof1.verifyFiatShamir(proverData[0], proofTranscript[0], proofTranscript[1], proverData[2]));
+					//					System.out.println(proof1.verifyFiatShamir(verifierData[0], proofTranscript[0], proofTranscript[1], verifierData[1]));
+				} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException
+						| ArraySizesDoNotMatchException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				for(int k = 0; k < out.length; k++) {
+					if(out[k] == null) continue;
 					try {
-						out[j].writeObject(shuffle[i][bit]);
-						out[j].writeObject(ephemerals[i][bit]);
-						out[j].flush();
+						//						System.out.println(Thread.currentThread() + " writing to " + k);
+						out[k].writeObject(table2s[index]);
+						out[k].writeObject(proofTranscript);
+
+						ByteArrayOutputStream out1 = new ByteArrayOutputStream();
+						try {
+							ObjectOutputStream out2 = new ObjectOutputStream(out1);
+							out2.writeObject(table2s[index]);
+							System.out.println("Single BigTable Size " + out1.toByteArray().length);
+							System.out.flush();
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						out1 = new ByteArrayOutputStream();
+						try {
+							ObjectOutputStream out2 = new ObjectOutputStream(out1);
+							out2.writeObject(proofTranscript);
+							System.out.println("Transcript Size " + out1.toByteArray().length);
+							System.out.flush();
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
 					} catch (IOException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 				}
-			}
-			int[][] otherShuffle = new int[in.length][];
-			BigInteger[][][] otherEphemerals = new BigInteger[in.length][][]; 
-			for(int j = 0; j < out.length; j++) {
-				if(in[j] != null) {
+				for(int k = 0; k < out.length; k++) {
+
+					if(out[k] == null) continue;
 					try {
-						otherShuffle[j] = (int[]) in[j].readObject();
-						otherEphemerals[j] = (BigInteger[][]) in[j].readObject();
-					} catch (IOException | ClassNotFoundException e) {
+						out[k].flush();
+					} catch (IOException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 				}
-				else {
-					otherShuffle[j] = shuffle[i][bit];
-					otherEphemerals[j] = ephemerals[i][bit];
-				}
-			}
-			
-			BigInteger[][] totalEphemerals1 = otherEphemerals[order[0]];
-			BigInteger[][] totalEphemerals2 = new BigInteger[rows][cols];
+			} else {
+				try {
+					//					System.out.println(Thread.currentThread().toString() + " is waiting for " + i + " from " + index);
+					table2s[index] = (AdditiveCiphertext[][]) in[index].readObject();
+					CryptoData[] transcript = (CryptoData[]) in[index].readObject();
 
-			System.out.println(Thread.currentThread() + " "+ 0 + " " + java.util.Arrays.toString(otherShuffle[order[0]]));
-			
-			int[] shuffle1 = otherShuffle[order[0]];
-			int[] shuffle2 = new int[rows];
-			
-			for(int j = 1; j < in.length; j++) {
-				int pos = order[j];
-				System.out.println(Thread.currentThread() + " " + pos + " " + java.util.Arrays.toString(otherShuffle[pos]));
-				for(int k = 0; k < rows; k++) {
-					shuffle2[k] = shuffle1[otherShuffle[pos][k]];
-					for(int l = 0; l < cols; l++) {
-						totalEphemerals2[k][l] = totalEphemerals1[k][l].add(otherEphemerals[pos][shuffle1[k]][l]).mod(curve.getOrder());
+					CryptoData[] verifierInputs = getInternalShuffleVerifierData(table2s[index], table2s[prev], minerKey);
+					//					System.out.println(Thread.currentThread().toString() + " has received " + i);
+
+					//					verifiers[index] = new Thread(verifierObs[index] = new ParallelVerifier(proof1, transcript, verifierInputs));
+					//					verifiers[index].setPriority(1);
+					//					verifiers[index].start();
+
+					try {
+						if(!proof1.verifyFiatShamir(verifierInputs[0], transcript[0], transcript[1], verifierInputs[1])) {
+							return null;
+						}
+					} catch (MultipleTrueProofException | NoTrueProofException | ArraySizesDoNotMatchException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
 					}
+					//					
+				} catch (ClassNotFoundException | IOException e) {
+					e.printStackTrace();
 				}
-//				System.out.println("reygiuhfdslkgjhrwigrphlkjfdsgbijwsbn " + table2s[0][k][k2].rerandomize(ephemerals[j][0][k][k2], minerKey).getCipher(minerKey).equals(otherTables[j][shuffle[j][0][k]][k2].getCipher(minerKey)) + " " + k);
-//				System.out.println("543yrwhgfshtrwyrtyrthgfdhgdfhgfdhgfd " + table2s[1][mainShuffle[k]][k2].rerandomize(ephemerals[j][1][mainShuffle[k]][k2], minerKey).getCipher(minerKey).equals(otherTables[j][shuffle[j][1][mainShuffle[k]]][k2].getCipher(minerKey)));
-
-
-				shuffle1 = shuffle2;
-				totalEphemerals1 = totalEphemerals2;
-			}
-			
-			
-			
-			for(int k = 0; k < rows; k++) {
-				for(int k2 = 0; k2 < rows; k2++) {
-					for(int l = 0; l < cols; l++) {
-						AdditiveElgamalCiphertext originalRerandomized = (AdditiveElgamalCiphertext) sourceTable[k2][l].rerandomize(totalEphemerals1[k2][l], minerKey);
-						AdditiveElgamalCiphertext dest = (AdditiveElgamalCiphertext) destTable[shuffle1[k]][l];
-						System.out.println("fadseioqgdshagkjero " + originalRerandomized.getCipher(minerKey).equals(dest.getCipher(minerKey)) + " " + k2);
-					}
-				}
-			}
-			BigInteger testEphemeral;
-			for(int i2 = 0; i2 < rows; i2++) {
-				for(int i3 = 0; i3 < rows; i3++) {
-					testEphemeral = otherEphemerals[order[0]][i2][0].add(otherEphemerals[order[1]][i3][0]).mod(curve.getOrder());
-					for(int i4 = 0; i4 < rows; i4++) {
-						for(int i5 = 0; i5 < rows; i5++) {
-							System.out.println("1 mcxnzmcxbvmiruq4ut8 " + sourceTable[i4][0].rerandomize(testEphemeral, minerKey).getCipher(minerKey).equals(destTable[i5][0].getCipher(minerKey)));
-					
-						}	
-					}	
-				}
-			}
-			for(int i2 = 0; i2 < rows; i2++) {
-				for(int i3 = 0; i3 < rows; i3++) {
-					testEphemeral = otherEphemerals[order[0]][i2][0].add(otherEphemerals[order[1]][i3][0]).mod(curve.getOrder());
-					for(int i4 = 0; i4 < rows; i4++) {
-						for(int i5 = 0; i5 < rows; i5++) {
-							System.out.println("2 mcxnzmcxbvmiruq4ut8 " + destTable[i4][0].getCipher(minerKey).equals(sourceTable[i5][0].getCipher(minerKey)));
-					
-						}	
-					}	
-				}
-			}
-			try {
-				System.out.println("Sleeping");
-				System.out.println(in.length);
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			}
 		}
-		
-		
-		
 		//		for(int i = 0; i < in.length; i++) {
 		//			if(in[i] == null) continue;
 		//			try {
@@ -2671,7 +2458,7 @@ public class BallotTransaction3_1 implements BallotT {
 		//			}
 		//			System.out.println(verifierObs[i].isVerified());
 		//		}
-		return table2s[1];
+		return table2s[order[order.length-1]];
 	}
 
 	class ParallelVerifier implements Runnable {

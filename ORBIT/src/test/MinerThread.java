@@ -78,12 +78,13 @@ public class MinerThread implements Runnable {
 				e.printStackTrace();
 			}
 		}
+		long start = System.currentTimeMillis();
 		for(int i = 0; i < votes.length; i++) {
-			if(leader) System.out.println(i);
-			long start = System.currentTimeMillis();
+//			if(leader) System.out.println(i);
 			votes[i].minerProcessBallot(blockchain, minerPrivKey,individualMinerKeys, in, out, rand);
-			if(leader) System.out.println(System.currentTimeMillis() - start);
+			blockchain.addTransaction(votes[i]);
 		}
+		if(leader) System.out.println(System.currentTimeMillis() - start);
 	}
 	public static int voteOnValue(int modulus, ObjectInputStream[] in, ObjectOutputStream[] out, AdditiveElgamalPubKey minerKey,
 			SecureRandom rand) {

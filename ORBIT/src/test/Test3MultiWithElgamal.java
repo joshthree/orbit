@@ -20,7 +20,7 @@ public class Test3MultiWithElgamal {
 		int numRaces = 5;
 		int numCandidates = 4;
 		int numVotes = 10;
-		int miners = 2;
+		int miners = 10;
 		int ringSize = 5;
 		
 		ECCurve c = spec.getCurve();

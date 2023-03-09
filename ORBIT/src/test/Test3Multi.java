@@ -72,7 +72,7 @@ public class Test3Multi {
 			minerKey = (AdditiveElgamalPubKey) minerKey.combineKeys(minerPrivKeys[i].getPubKey());
 		}
 
-		Election election = new Election(races, String.format("test election, numCandidates=%d, numRaces=%d", numCandidates, numRaces), minerKey, 8,4, 3);
+		Election election = new Election(races, String.format("test election, numCandidates=%d, numRaces=%d", numCandidates, numRaces), minerKey, 16,8, 5);
 		
 		int[][] bdResults = new int[numRaces][numCandidates+1];
 		

@@ -34,7 +34,7 @@ import election.singleCipherSVHNw.SVHNwVoterDecision;
 import transactions.BallotT;
 import transactions.BallotTransaction1;
 import transactions.BallotTransaction2;
-import transactions.BallotTransaction3;
+import transactions.BallotTransaction3Failed;
 import transactions.ElectionTransaction;
 import transactions.ProcessedBlockchain;
 import transactions.RegistrationTransaction;
@@ -291,7 +291,7 @@ public class Test3 {
 				ring[j] = registration[mixin];
 				
 			}
-			ballots[i] = new BallotTransaction3(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
+			ballots[i] = new BallotTransaction2(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
 		}
 		int last = encryptedVotes.length;
 		int sourcePos = rand.nextInt(ringSize);
@@ -310,7 +310,7 @@ public class Test3 {
 			ring[j] = registration[mixin];
 			
 		}
-		ballots[last] = new BallotTransaction3(ring, sourcePos, voterPriv[0][0], new AdditiveElgamalPrivKey(g, rand), passwords[0][0].add(BigInteger.ONE), passwords[0][1], electionTx, encryptedVotes[0], passwords[0][2], rand);
+		ballots[last] = new BallotTransaction2(ring, sourcePos, voterPriv[0][0], new AdditiveElgamalPrivKey(g, rand), passwords[0][0].add(BigInteger.ONE), passwords[0][1], electionTx, encryptedVotes[0], passwords[0][2], rand);
 
 		BallotT[] ballots2 = new BallotT[encryptedVotes.length+1];
 		for(int i = 0; i < ballots2.length; i++) {
