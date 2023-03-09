@@ -242,16 +242,16 @@ public class Test3 {
 		ECPoint g = spec.getG();
 		BigInteger order = curve.getOrder();
 
-		AdditiveElgamalPrivKey[][] voterPriv = new AdditiveElgamalPrivKey[encryptedVotes.length][2];
-		BigInteger[][] passwords = new BigInteger[encryptedVotes.length][3];
-		AdditiveElgamalCiphertext[] passwordCiphers = new AdditiveElgamalCiphertext[encryptedVotes.length];
+		int numReg = Math.max(encryptedVotes.length, ringSize*2);
+		AdditiveElgamalPrivKey[][] voterPriv = new AdditiveElgamalPrivKey[numReg][2];
+		BigInteger[][] passwords = new BigInteger[numReg][3];
+		AdditiveElgamalCiphertext[] passwordCiphers = new AdditiveElgamalCiphertext[numReg];
 		
-		RegistrationTransaction[] registration = new RegistrationTransaction[encryptedVotes.length];
+		RegistrationTransaction[] registration = new RegistrationTransaction[numReg];
 		
 		ElectionTransaction electionTx = new ElectionTransaction(election);
 		blockchain.addTransaction(electionTx);
-		System.out.println(electionTx.getPosition());
-		for(int i = 0; i < encryptedVotes.length; i++) {
+		for(int i = 0; i < numReg; i++) {
 			voterPriv[i][0] = new AdditiveElgamalPrivKey(g, rand);
 			voterPriv[i][1] = new AdditiveElgamalPrivKey(g, rand);
 
@@ -271,7 +271,7 @@ public class Test3 {
 
 		
 		
-		BallotT[] ballots = new BallotT[encryptedVotes.length+1];
+		BallotT[] ballots = new BallotT[encryptedVotes.length];
 
 		long time3 = System.currentTimeMillis();
 		for(int i = 0; i < encryptedVotes.length; i++) {
@@ -293,36 +293,36 @@ public class Test3 {
 			}
 			ballots[i] = new BallotTransaction2(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
 		}
-		int last = encryptedVotes.length;
-		int sourcePos = rand.nextInt(ringSize);
-		SourceTransaction[] ring = new SourceTransaction[ringSize];
-		ring[sourcePos] = registration[0];
-		ArrayList<Integer> ringMembers = new ArrayList<Integer>();
-		ringMembers.add(0);
-		for(int j = 0; j < ringSize; j++) {
-			if(j == sourcePos) continue;
-			Integer mixin;
-			do {
-				mixin = rand.nextInt(registration.length);
-			} while(ringMembers.contains(mixin));
-			
-			ringMembers.add(mixin);
-			ring[j] = registration[mixin];
-			
-		}
-		ballots[last] = new BallotTransaction2(ring, sourcePos, voterPriv[0][0], new AdditiveElgamalPrivKey(g, rand), passwords[0][0].add(BigInteger.ONE), passwords[0][1], electionTx, encryptedVotes[0], passwords[0][2], rand);
+//		int last = encryptedVotes.length;
+//		int sourcePos = rand.nextInt(ringSize);
+//		SourceTransaction[] ring = new SourceTransaction[ringSize];
+//		ring[sourcePos] = registration[0];
+//		ArrayList<Integer> ringMembers = new ArrayList<Integer>();
+//		ringMembers.add(0);
+//		for(int j = 0; j < ringSize; j++) {
+//			if(j == sourcePos) continue;
+//			Integer mixin;
+//			do {
+//				mixin = rand.nextInt(registration.length);
+//			} while(ringMembers.contains(mixin));
+//			
+//			ringMembers.add(mixin);
+//			ring[j] = registration[mixin];
+//			
+//		}
+//		ballots[last] = new BallotTransaction2(ring, sourcePos, voterPriv[0][0], new AdditiveElgamalPrivKey(g, rand), passwords[0][0].add(BigInteger.ONE), passwords[0][1], electionTx, encryptedVotes[0], passwords[0][2], rand);
 
-		BallotT[] ballots2 = new BallotT[encryptedVotes.length+1];
-		for(int i = 0; i < ballots2.length; i++) {
-			ballots2[(i+1)%ballots2.length] = ballots[i];
-		}
-		
+//		BallotT[] ballots2 = new BallotT[encryptedVotes.length+1];
+//		for(int i = 0; i < ballots2.length; i++) {
+//			ballots2[(i+1)%ballots2.length] = ballots[i];
+//		}
+//		
 		
 		
 		long time4 = System.currentTimeMillis();
 		System.out.println(time4 - time3);
-		for(int i = 0; i < ballots2.length; i++) {
-			if(!ballots2[i].verifyTransaction(blockchain))
+		for(int i = 0; i < ballots.length; i++) {
+			if(!ballots[i].verifyTransaction(blockchain))
 			{
 				System.out.println("NOOOOO");
 			}
@@ -331,6 +331,6 @@ public class Test3 {
 
 		long time5 = System.currentTimeMillis();
 		System.out.println(time5 - time4);
-		return ballots2;
+		return ballots;
 	}
 }

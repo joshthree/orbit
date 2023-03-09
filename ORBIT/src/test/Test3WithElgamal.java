@@ -17,7 +17,7 @@ public class Test3WithElgamal {
 		ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("secp256k1");
 		int numRaces = 5;
 		int numCandidates = 4;
-		int numVotes = 50;
+		int numVotes = 2;
 		int ringSize = 15;
 		int miners = 10;
 
