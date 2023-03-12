@@ -42,11 +42,11 @@ import transactions.SourceTransaction;
 
 public class Test3 {
 	public static void main2(String arg[]) {
-		int numRaces = 5;
-		int numCandidates = 4;
-		int numVotes = 20;
-		int miners = 15;
-		int ringSize = 15;
+		int numRaces = Integer.parseInt(arg[0]);
+		int numCandidates = Integer.parseInt(arg[1]);
+		int numVotes = Integer.parseInt(arg[2]);
+		int miners = Integer.parseInt(arg[3]);
+		int ringSize = Integer.parseInt(arg[4]);
 		//SecureRandom rand = new SecureRandom("fhdjkghqeriupgyqhkdlvdjchlzvkcjxvbfiuhagperidfhgkhfdspogieqrjl".getBytes());
 		SecureRandom rand = new SecureRandom();
 		
@@ -142,7 +142,7 @@ public class Test3 {
 		BallotT[] ballots = Test3.createTransactions(election, encryptedVotes, blockchain, ringSize, rand);
 
 		long start4 = System.currentTimeMillis();
-		System.out.printf("%d, %d, %d, %d \n", start1-start0, start2-start1, start3-start2, start4-start3);
+		//System.out.printf("%d, %d, %d, %d \n", start1-start0, start2-start1, start3-start2, start4-start3);
 		ObjectInputStream[][] in = new ObjectInputStream[miners][miners];
 		ObjectOutputStream[][] out = new ObjectOutputStream[miners][miners];
 		AdditiveElgamalPubKey[] individualMinerKeys = new AdditiveElgamalPubKey[minerPrivKeys.length];
@@ -183,12 +183,12 @@ public class Test3 {
 		
 		
 		Thread[] minerThread = new Thread[miners];
-		System.err.println("Test Writing Blockchain");
+		//System.err.println("Test Writing Blockchain");
 		ByteArrayOutputStream out1 = new ByteArrayOutputStream();
 		try {
 			ObjectOutput out2 = new ObjectOutputStream(out1);
 			out2.writeObject(ballots);
-			System.out.println("Array size = " + out1.toByteArray().length);
+			System.out.printf(out1.toByteArray().length+",");
 			ByteArrayInputStream in1 = new ByteArrayInputStream(out1.toByteArray());
 			ObjectInput in2 = new ObjectInputStream(in1);
 			in2.readObject();
@@ -198,7 +198,7 @@ public class Test3 {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		System.err.println("End Test Writing Blockchain");
+		//System.err.println("End Test Writing Blockchain");
 		for(int i = 0; i < miners; i++) {
 			try {
 				if(i == 0) {
@@ -322,7 +322,7 @@ public class Test3 {
 		
 		
 		long time4 = System.currentTimeMillis();
-		System.out.println(time4 - time3);
+		//ysSystem.out.println(time4 - time3);
 		for(int i = 0; i < ballots.length; i++) {
 			if(!ballots[i].verifyTransaction(blockchain))
 			{
@@ -332,7 +332,7 @@ public class Test3 {
 
 
 		long time5 = System.currentTimeMillis();
-		System.out.println(time5 - time4);
+		//ysSystem.out.println(time5 - time4);
 		return ballots;
 	}
 }

@@ -38,20 +38,20 @@ import transactions.ProcessedBlockchain;
 
 public class Test3Multi {
 	public static void main(String arg[]) {
-		int numRaces = 5;
-		int numCandidates = 4;
-		int numVotes = 50;
-		int numMiners = 10;
-		int ringSize = 15;
+		int numRaces = Integer.parseInt(arg[0]);
+		int numCandidates = Integer.parseInt(arg[1]);
+		int numVotes = Integer.parseInt(arg[2]);
+		int miners = Integer.parseInt(arg[3]); //ys numMiners vs miners
+		int ringSize = Integer.parseInt(arg[4]);
 		//SecureRandom rand = new SecureRandom("fhdjkghqeriupgyqhkdlvdjchlzvkcjxvbfiuhagperidfhgkhfdspogieqrjl".getBytes());
 		SecureRandom rand = new SecureRandom();
 		
-		PaillierPrivKey priv = new PaillierPrivKey(2048, rand); 
+		PaillierPrivKey priv = new PaillierPrivKey(2048, rand);
 		System.out.println(priv);
 		PaillierPubKey pub = (PaillierPubKey) priv.getPubKey();
 		int bitSeparation = 33;
 		
-		electionTest(numRaces, numCandidates, numVotes, numMiners, ringSize, rand, pub, bitSeparation);
+		electionTest(numRaces, numCandidates, numVotes, miners, ringSize, rand, pub, bitSeparation);
 	}
 
 	public static void electionTest(int numRaces, int numCandidates, int numVotes, int miners, int ringSize, SecureRandom rand,
@@ -121,19 +121,19 @@ public class Test3Multi {
 		}
 		
 		if (verified) {
-			System.out.println("All good");
+			//ysSystem.out.println("All good");
 		}
 		
 		long start3 = System.currentTimeMillis();
 		
 		for (int i = 0; i < numRaces; i++) {
 			for (int j = 0; j < numCandidates; j++) {
-				System.out.printf("%d, ", bdResults[i][j]);
+				//System.out.printf("%d, ", bdResults[i][j]); ys
 			}
-			System.out.println();
+			//System.out.println(); ys
 		}
 
-		System.out.printf("%d, %d, %d, ", start1-start0, start2-start1, start3-start2);
+		//ysSystem.out.printf("%d, %d, %d, ", start1-start0, start2-start1, start3-start2);
 		ProcessedBlockchain blockchain = new ProcessedBlockchain();
 		BallotT[] ballots = Test3.createTransactions(election, encryptedVotes, blockchain, ringSize, rand);
 		ObjectInputStream[][] in = new ObjectInputStream[miners][miners];
@@ -146,7 +146,7 @@ public class Test3Multi {
 			for(int j = 0; j < miners; j++) {
 				if(i == j) continue;
 				try {
-					PipedInputStream pIn = new PipedInputStream(3000000);
+					PipedInputStream pIn = new PipedInputStream(4000000);
 					PipedOutputStream pOut = new PipedOutputStream(pIn);
 					out[j][i] = new ObjectOutputStream(pOut);
 					in[i][j] = new ObjectInputStream(pIn);
@@ -178,12 +178,12 @@ public class Test3Multi {
 		
 		
 		Thread[] minerThread = new Thread[miners];
-		System.err.println("Test Writing Blockchain");
+		//ysSystem.err.println("Test Writing Blockchain");
 		ByteArrayOutputStream out1 = new ByteArrayOutputStream();
 		try {
 			ObjectOutput out2 = new ObjectOutputStream(out1);
 			out2.writeObject(ballots);
-			System.out.println("Array size = " + out1.toByteArray().length);
+			System.out.printf(out1.toByteArray().length+","); //ysbefore1
 			ByteArrayInputStream in1 = new ByteArrayInputStream(out1.toByteArray());
 			ObjectInput in2 = new ObjectInputStream(in1);
 			in2.readObject();
@@ -193,7 +193,7 @@ public class Test3Multi {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		System.err.println("End Test Writing Blockchain");
+		//ysSystem.err.println("End Test Writing Blockchain");
 		if(miners != 1) {
 			for(int i = 0; i < miners; i++) {
 				try {
@@ -221,7 +221,7 @@ public class Test3Multi {
 			}
 		} else {
 			try {
-				PipedInputStream pIn = new PipedInputStream(3000000);
+				PipedInputStream pIn = new PipedInputStream(4000000);
 				PipedOutputStream pOut = new PipedOutputStream(pIn);
 				out[0][0] = new ObjectOutputStream(pOut);
 				in[0][0] = new ObjectInputStream(pIn);
@@ -252,6 +252,6 @@ public class Test3Multi {
 				e.printStackTrace();
 			}
 		}
-		System.out.println(cpuTime);
+		System.out.println(cpuTime); //ysend4
 	}
 }

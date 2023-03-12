@@ -18,13 +18,13 @@ import zero_knowledge_proofs.ZKToolkit;
 
 public class Test3MultiWithElgamal {
 	public static void main(String arg[]) {
-		System.out.println(ManagementFactory.getThreadMXBean().isThreadCpuTimeSupported());
+		//System.out.println(ManagementFactory.getThreadMXBean().isThreadCpuTimeSupported());
 		ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("secp256k1");
-		int numRaces = 5;
-		int numCandidates = 4;
-		int numVotes = 2;
-		int miners = 10;
-		int ringSize = 5;
+		int numRaces = Integer.parseInt(arg[0]);
+		int numCandidates = Integer.parseInt(arg[1]);
+		int numVotes = Integer.parseInt(arg[2]);
+		int miners = Integer.parseInt(arg[3]);
+		int ringSize = Integer.parseInt(arg[4]);
 		
 		ECCurve c = spec.getCurve();
 		ECPoint g = spec.getG();

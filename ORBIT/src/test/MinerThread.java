@@ -1,7 +1,11 @@
 package test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInput;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
@@ -33,8 +37,10 @@ public class MinerThread implements Runnable {
 	private AdditiveElgamalPubKey[] individualMinerKeys;
 	private ProcessedBlockchain blockchain;
 	public long cpuTime;
+	private boolean leader = false;
+	
 	public MinerThread(AdditiveElgamalPrivKey minerPrivKey, AdditiveElgamalPubKey[] individualMinerKeys, ObjectInputStream[] in, ObjectOutputStream[] out) {
-
+		
 		this.out = out;
 		this.in = in;
 		this.minerPrivKey = minerPrivKey;
@@ -45,13 +51,6 @@ public class MinerThread implements Runnable {
 		}
 		this.individualMinerKeys = individualMinerKeys;
 		
-	}
-	
-	@Override
-	public void run() {
-		ThreadMXBean threadTracker = ManagementFactory.getThreadMXBean();
-		threadTracker.setThreadCpuTimeEnabled(true);
-		boolean leader = false;
 		if(in.length != 1) {
 			try {
 				if(in[0] == null) {
@@ -82,14 +81,48 @@ public class MinerThread implements Runnable {
 				e.printStackTrace();
 			}
 		}
+		
+		
+		
+	}
+	
+	@Override
+	public void run() {
+		ThreadMXBean threadTracker = ManagementFactory.getThreadMXBean();
+		threadTracker.setThreadCpuTimeEnabled(true);
+		
+		
 		long start = System.currentTimeMillis();
 		for(int i = 0; i < votes.length; i++) {
-//			if(leader) System.out.println(i);
+			if(leader) System.out.print(i + " ");
 			votes[i].minerProcessBallot(blockchain, minerPrivKey,individualMinerKeys, in, out, rand);
 			blockchain.addTransaction(votes[i]);
 		}
-		if(leader) System.out.println(System.currentTimeMillis() - start);
+		
 		cpuTime = threadTracker.getCurrentThreadCpuTime();
+		
+		if(leader) {
+			System.out.printf(", $d, ", System.currentTimeMillis() - start); //ysstart2
+			try {
+				
+				ByteArrayOutputStream out1 = new ByteArrayOutputStream();
+				ObjectOutput out2 = new ObjectOutputStream(out1);
+				out2.writeObject(votes);
+				System.out.printf(out1.toByteArray().length+","); //ysafter3
+				ByteArrayInputStream in1 = new ByteArrayInputStream(out1.toByteArray());
+				ObjectInput in2 = new ObjectInputStream(in1);
+				in2.readObject();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		
+		}
+		
+		
+		
 	}
 	public static int voteOnValue(int modulus, ObjectInputStream[] in, ObjectOutputStream[] out, AdditiveElgamalPubKey minerKey,
 			SecureRandom rand) {

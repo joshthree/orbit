@@ -309,7 +309,6 @@ public class Test2_1 {
 		long time3 = System.currentTimeMillis();
 		HashMap<Integer, Boolean> map = new HashMap<Integer, Boolean>();
 		for(int i = 0; i < encryptedVotes.length; i++) {
-			map.clear();
 			int sourcePos = rand.nextInt(ringSize);
 			SourceTransaction[] ring = new SourceTransaction[ringSize];
 			ring[sourcePos] = registration[i];
