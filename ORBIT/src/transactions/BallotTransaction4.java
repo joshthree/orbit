@@ -1021,9 +1021,8 @@ public class BallotTransaction4 implements BallotT {
 				}
 				if(i == election.getResetRowCount()) {
 					if(countEqual == i || countUnequal == i) {
-						//						retry = true;
-						System.out.println("Have to remake table  CURRENTLY DISABLED");
-						//						break;
+						retry = true;
+						break;
 					}
 				}
 			}
@@ -2568,7 +2567,6 @@ public class BallotTransaction4 implements BallotT {
 					CryptoData[][] transcripts = new CryptoData[numBits][];
 					for(int j = 0; j < numBits; j++) {
 						BigInteger bit = new BigInteger(1, rand);
-						bit = BigInteger.ONE;
 						BigInteger ephemeral = minerKey.generateEphemeral(rand);
 						AdditiveElgamalCiphertext addedPortion = toReturn[j].scalarMultiply(BigInteger.TWO.negate(), minerKey).scalarMultiply(bit, minerKey).homomorphicAdd(minerKey.encrypt(bit, ephemeral), minerKey);
 						newToReturn[j] = toReturn[j].homomorphicAdd(addedPortion, minerKey);
