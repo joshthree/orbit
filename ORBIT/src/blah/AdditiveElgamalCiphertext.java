@@ -41,7 +41,7 @@ public class AdditiveElgamalCiphertext extends AdditiveCiphertext {
 		ephemeralBytes = ephemeral.getEncoded(true);
 	}
 	@Override
-	public AdditiveCiphertext homomorphicAdd(AdditiveCiphertext toAdd, Additive_Pub_Key pub) {
+	public AdditiveElgamalCiphertext homomorphicAdd(AdditiveCiphertext toAdd, Additive_Pub_Key pub) {
 		if(cipher == null) {
 			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
 			this.cipher = curve.decodePoint(cipherBytes);
@@ -59,7 +59,7 @@ public class AdditiveElgamalCiphertext extends AdditiveCiphertext {
 		return ephemeral;
 	}
 	@Override
-	public AdditiveCiphertext scalarAdd(BigInteger toAdd, Additive_Pub_Key pub) {
+	public AdditiveElgamalCiphertext scalarAdd(BigInteger toAdd, Additive_Pub_Key pub) {
 		if(cipher == null) {
 			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
 			this.cipher = curve.decodePoint(cipherBytes);
@@ -69,7 +69,7 @@ public class AdditiveElgamalCiphertext extends AdditiveCiphertext {
 	}
 
 	@Override
-	public AdditiveCiphertext scalarMultiply(BigInteger toMultiply, Additive_Pub_Key pub) {
+	public AdditiveElgamalCiphertext scalarMultiply(BigInteger toMultiply, Additive_Pub_Key pub) {
 		if(cipher == null) {
 			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
 			this.cipher = curve.decodePoint(cipherBytes);
@@ -116,7 +116,7 @@ public class AdditiveElgamalCiphertext extends AdditiveCiphertext {
 	}
 
 	@Override
-	public Object getCipher(Pub_Key pub) {
+	public ECPoint getCipher(Pub_Key pub) {
 		if(cipher == null) {
 			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
 			this.cipher = curve.decodePoint(cipherBytes);
@@ -137,7 +137,7 @@ public class AdditiveElgamalCiphertext extends AdditiveCiphertext {
 	}
 
 	@Override
-	public AdditiveCiphertext rerandomize(SecureRandom rand, Additive_Pub_Key pub) {
+	public AdditiveElgamalCiphertext rerandomize(SecureRandom rand, Additive_Pub_Key pub) {
 		if(cipher == null) {
 			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
 			this.cipher = curve.decodePoint(cipherBytes);
@@ -147,7 +147,7 @@ public class AdditiveElgamalCiphertext extends AdditiveCiphertext {
 	}
 
 	@Override
-	public AdditiveCiphertext rerandomize(BigInteger ephemeral, Additive_Pub_Key pub) {
+	public AdditiveElgamalCiphertext rerandomize(BigInteger ephemeral, Additive_Pub_Key pub) {
 		if(cipher == null) {
 			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
 			this.cipher = curve.decodePoint(cipherBytes);
@@ -256,7 +256,7 @@ public class AdditiveElgamalCiphertext extends AdditiveCiphertext {
 //		this.ephemeral = curve.decodePoint(ephemeral);
 //	}
 	@Override
-	public AdditiveCiphertext negate(Additive_Pub_Key pub) {
+	public AdditiveElgamalCiphertext negate(Additive_Pub_Key pub) {
 		if(cipher == null) {
 			ECCurve curve = ((AdditiveElgamalPubKey) pub).getG().getCurve();
 			this.cipher = curve.decodePoint(cipherBytes);

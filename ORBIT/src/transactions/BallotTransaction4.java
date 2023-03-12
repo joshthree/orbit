@@ -832,17 +832,6 @@ public class BallotTransaction4 implements BallotT {
 
 	@Override
 	public boolean minerProcessBallot(ProcessedBlockchain blockchain, AdditiveElgamalPrivKey minerPrivKey, AdditiveElgamalPubKey[] individualMinerKeys, ObjectInputStream[] in, ObjectOutputStream[] out, SecureRandom rand) {
-		{
-			ByteArrayOutputStream out1 = new ByteArrayOutputStream();
-			try {
-				ObjectOutputStream out2 = new ObjectOutputStream(out1);
-				out2.writeObject(this);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			System.out.println("sgfsdfgsf Ballot Size Before " + out1.toByteArray().length);
-		}
 		int party = -1;
 		
 		Election election = ((ElectionTransaction) blockchain.getTransaction((int) electionPos)).getElection();
@@ -853,28 +842,16 @@ public class BallotTransaction4 implements BallotT {
 		ECPoint g = minerKey.getG();
 
 		int rowCount = election.getRowCount();
-		AdditiveCiphertext[][] table1 = new AdditiveElgamalCiphertext[rowCount][2];
-		for(int i = 0; i < rowCount/2; i++) {
-			table1[i][0] = minerKey.encrypt(BigInteger.valueOf(i+1), BigInteger.ZERO);
-			table1[i][1] = minerKey.encrypt(BigInteger.valueOf(i+1), BigInteger.ZERO);
-		}
-		for(int i = rowCount/2; i < rowCount; i++) {
-			table1[i][0] = minerKey.encrypt(BigInteger.valueOf(i+1), BigInteger.ZERO);
-			table1[i][1] = minerKey.encrypt(BigInteger.valueOf(i+2), BigInteger.ZERO);
-		}
+		int abbridgedRowCount = election.getAbbridgedRowCount();
 		boolean retry = false;
 		do {
 			tableOmega = null;
 			retry = false;
-			AdditiveCiphertext[][] table2 = shuffleInternal(table1, in, out, minerKey, rand);
-			if(table2 == null) {
-				return false;
-			}
-			int abbridgedRowCount = election.getAbbridgedRowCount();
+			AdditiveCiphertext[] table1 = randomBits(abbridgedRowCount-1, minerKey, rand, out, in);
 			AdditiveCiphertext[][] table3 = new AdditiveElgamalCiphertext[election.getAbbridgedRowCount()][3];
 			for(int i = 0; i < abbridgedRowCount-1; i++) {
-				table3[i][0] = table2[i][0];
-				table3[i][1] = table2[i][1];
+				table3[i][0] = minerKey.encrypt(BigInteger.valueOf(i+1), BigInteger.ZERO).homomorphicAdd(table1[i], minerKey);
+				table3[i][1] = minerKey.encrypt(BigInteger.valueOf(i+1), BigInteger.ZERO);
 				table3[i][2] = minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO);
 			}
 			table3[abbridgedRowCount-1][0] = passwordDifferenceCipher;
@@ -929,16 +906,6 @@ public class BallotTransaction4 implements BallotT {
 							if(out[k] == null) continue;
 							try {
 								out[k].writeObject(transcript);
-								ByteArrayOutputStream out1 = new ByteArrayOutputStream();
-								try {
-									ObjectOutputStream out2 = new ObjectOutputStream(out1);
-									out2.writeObject(transcript);
-									System.out.println("Transcript Size " + out1.toByteArray().length);
-									System.out.flush();
-								} catch (IOException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
 							} catch (IOException e) {
 								// TODO Auto-generated catch block
 								e.printStackTrace();
@@ -1347,7 +1314,7 @@ public class BallotTransaction4 implements BallotT {
 				dummyTableRandomizeTranscript[i][1] = new CryptoDataArray(new BigInteger[] {combinedZ[i]});
 				try {
 					if(proofOfStuff.verifyFiatShamir(proverInputs[0], dummyTableRandomizeTranscript[i][0], dummyTableRandomizeTranscript[i][1], proverInputs[2])) {
-						System.out.println("First Try! -1");
+						
 					} else {
 						System.out.println("The dream is deaed :-( -1");
 					}
@@ -1467,7 +1434,7 @@ public class BallotTransaction4 implements BallotT {
 				dummyTableDecryptTranscript[i][1] = new CryptoDataArray(new BigInteger[] {combinedZ[i]});
 				try {
 					if(proofOfStuff.verifyFiatShamir(proverInputs[0], dummyTableDecryptTranscript[i][0], dummyTableDecryptTranscript[i][1], proverInputs[2])) {
-						System.out.println("First Try! 0");
+						
 					} else {
 						System.out.println("The dream is deaed :-( 0");
 					}
@@ -1713,7 +1680,7 @@ public class BallotTransaction4 implements BallotT {
 			
 			try {
 				if(proofOfStuff.verifyFiatShamir(proverInputs[0], passwordTableRandomizeTranscript[i][0], passwordTableRandomizeTranscript[i][1], proverInputs[2])) {
-					System.out.println("First Try! 1");
+					
 				} else {
 					System.out.println("The dream is deaed :-(");
 				}
@@ -1835,7 +1802,7 @@ public class BallotTransaction4 implements BallotT {
 			
 			try {
 				if(proofOfStuff.verifyFiatShamir(proverInputs[0], passwordTableDecryptTranscript[i][0], passwordTableDecryptTranscript[i][1], proverInputs[2])) {
-					System.out.println("First Try! 2");
+					
 				} else {
 					System.out.println("The dream is deaed :-( 2");
 				}
@@ -1868,7 +1835,6 @@ public class BallotTransaction4 implements BallotT {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			System.out.println("gjhfdsgjeyriu Ballot Size After " + out1.toByteArray().length);
 		}	
 //		private CryptoData[][] dummyTableRandomizeTranscript;
 //		private CryptoData[][] dummyTableDecryptTranscript;
@@ -1894,7 +1860,6 @@ public class BallotTransaction4 implements BallotT {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			System.out.println("gjhfdsgjeyriu Proof infrastructure " + out1.toByteArray().length);
 		}
 		{
 			ByteArrayOutputStream out1 = new ByteArrayOutputStream();
@@ -1910,7 +1875,6 @@ public class BallotTransaction4 implements BallotT {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			System.out.println("gjhfdsgjeyriu Results " + out1.toByteArray().length);
 		}
 		return true;
 	}
@@ -2338,7 +2302,7 @@ public class BallotTransaction4 implements BallotT {
 				prev = order[i-1];
 			}
 			if(in[index] == null) {
-				System.out.println("My turn:  " + index);
+//				System.out.println("My turn:  " + index);
 				int[] shuffle = new int[rows];
 				for(int k = 0; k < rows; k++) {
 					shuffle[k] = k;
@@ -2385,27 +2349,6 @@ public class BallotTransaction4 implements BallotT {
 						//						System.out.println(Thread.currentThread() + " writing to " + k);
 						out[k].writeObject(table2s[index]);
 						out[k].writeObject(proofTranscript);
-
-						ByteArrayOutputStream out1 = new ByteArrayOutputStream();
-						try {
-							ObjectOutputStream out2 = new ObjectOutputStream(out1);
-							out2.writeObject(table2s[index]);
-							System.out.println("Single BigTable Size " + out1.toByteArray().length);
-							System.out.flush();
-						} catch (IOException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-						out1 = new ByteArrayOutputStream();
-						try {
-							ObjectOutputStream out2 = new ObjectOutputStream(out1);
-							out2.writeObject(proofTranscript);
-							System.out.println("Transcript Size " + out1.toByteArray().length);
-							System.out.flush();
-						} catch (IOException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
 					} catch (IOException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -2601,5 +2544,114 @@ public class BallotTransaction4 implements BallotT {
 
 	}
 
+	public static AdditiveCiphertext[] randomBits(int numBits, AdditiveElgamalPubKey minerKey, SecureRandom rand, ObjectOutputStream[] out, ObjectInputStream[] in) {
+		AdditiveElgamalCiphertext[] toReturn = new AdditiveElgamalCiphertext[numBits];
+		for(int i = 0; i < toReturn.length; i++) {
+			toReturn[i] = (AdditiveElgamalCiphertext) minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO);
+		}
+		ECPoint g = minerKey.getG();
+		ECPoint h = minerKey.getY();
+		ECCurve curve = g.getCurve();
+		CryptoData env;
+		ZKPProtocol proof;
+		{
+			CryptoData innerEnv = new CryptoDataArray(new CryptoData[] {new ECCurveData(curve, h), new ECPointData(g)});
+			env = new CryptoDataArray(new CryptoData[] {innerEnv, innerEnv});
+			ZKPProtocol innerProof = new ECSchnorrCombinations(new int[][][] {{{0,0}}, {{1,0}}});
+			proof = new ZeroKnowledgeOrProver(new ZKPProtocol[] {innerProof, innerProof}, curve.getOrder());
+		}
+		int[] order = MinerThread.chooseOrder(in, out, minerKey, rand);
+		try {
+			for(int i = 0; i < in.length; i++) {
+				if (in[order[i]] == null) {
+					AdditiveElgamalCiphertext[] newToReturn = new AdditiveElgamalCiphertext[numBits];
+					CryptoData[][] transcripts = new CryptoData[numBits][];
+					for(int j = 0; j < numBits; j++) {
+						BigInteger bit = new BigInteger(1, rand);
+						bit = BigInteger.ONE;
+						BigInteger ephemeral = minerKey.generateEphemeral(rand);
+						AdditiveElgamalCiphertext addedPortion = toReturn[j].scalarMultiply(BigInteger.TWO.negate(), minerKey).scalarMultiply(bit, minerKey).homomorphicAdd(minerKey.encrypt(bit, ephemeral), minerKey);
+						newToReturn[j] = toReturn[j].homomorphicAdd(addedPortion, minerKey);
+						
+						CryptoData[] pubInput = new CryptoData[2];
+						AdditiveElgamalCiphertext addedPortionIfOne = toReturn[j].scalarMultiply(BigInteger.TWO.negate(), minerKey).scalarAdd(BigInteger.ONE, minerKey);
+						AdditiveElgamalCiphertext remainder0 = newToReturn[j].homomorphicAdd(toReturn[j].negate(minerKey), minerKey);
+						AdditiveElgamalCiphertext remainder1 = remainder0.homomorphicAdd(addedPortionIfOne.negate(minerKey), minerKey);
 
+						pubInput[0] = new CryptoDataArray(new CryptoData[] {new ECPointData(remainder0.getCipher(minerKey)), new ECPointData(remainder0.getEphemeral(minerKey))});
+						pubInput[1] = new CryptoDataArray(new CryptoData[] {new ECPointData(remainder1.getCipher(minerKey)), new ECPointData(remainder1.getEphemeral(minerKey))});
+
+						CryptoData[] secInput = new CryptoData[3];
+						if(bit.equals(BigInteger.ZERO)) {
+							secInput[0] = new CryptoDataArray(new BigInteger[] {minerKey.generateEphemeral(rand), ephemeral});
+							secInput[1] = new CryptoDataArray(new BigInteger[] {minerKey.generateEphemeral(rand)});
+							secInput[2] = new CryptoDataArray(new CryptoData[] {new BigIntData(null), new BigIntData(minerKey.generateEphemeral(rand))});
+						} else {
+							secInput[0] = new CryptoDataArray(new BigInteger[] {minerKey.generateEphemeral(rand)});
+							secInput[1] = new CryptoDataArray(new BigInteger[] {minerKey.generateEphemeral(rand), ephemeral});
+							secInput[2] = new CryptoDataArray(new CryptoData[] {new BigIntData(minerKey.generateEphemeral(rand)), new BigIntData(null)});
+						}
+						try {
+							transcripts[j] = proof.proveFiatShamir(new CryptoDataArray(pubInput), new CryptoDataArray(secInput), env);
+						} catch (MultipleTrueProofException | NoTrueProofException | ArraySizesDoNotMatchException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						
+						try {
+							if(proof.verifyFiatShamir(new CryptoDataArray(pubInput), transcripts[j][0], transcripts[j][1], env)) {
+								
+							} else System.out.println("Fail 24361532");
+						} catch (MultipleTrueProofException | NoTrueProofException | ArraySizesDoNotMatchException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+					
+					for(int j = 0; j < in.length; j++) {
+						if(out[order[j]] != null) {
+							out[order[j]].writeObject(newToReturn);
+							out[order[j]].writeObject(transcripts);
+							out[order[j]].flush();
+						}
+					}
+					toReturn = newToReturn;
+				} else {
+					AdditiveElgamalCiphertext[] newToReturn = (AdditiveElgamalCiphertext[]) in[order[i]].readObject();
+					CryptoData[][] transcripts = (CryptoData[][]) in[order[i]].readObject();
+					for(int j = 0; j < numBits; j++) {
+						AdditiveElgamalCiphertext addedPortion = newToReturn[j].homomorphicAdd(toReturn[j].negate(minerKey), minerKey);//toReturn[j].scalarMultiply(BigInteger.TWO.negate(), minerKey).scalarMultiply(bit, minerKey).homomorphicAdd(minerKey.encrypt(bit, ephemeral), minerKey);
+						newToReturn[j] = toReturn[j].homomorphicAdd(addedPortion, minerKey);
+						
+						CryptoData[] pubInput = new CryptoData[2];
+						AdditiveElgamalCiphertext addedPortionIfOne = toReturn[j].scalarMultiply(BigInteger.TWO.negate(), minerKey).scalarAdd(BigInteger.ONE, minerKey);
+
+						AdditiveElgamalCiphertext remainder0 = newToReturn[j].homomorphicAdd(toReturn[j].negate(minerKey), minerKey);
+						AdditiveElgamalCiphertext remainder1 = remainder0.homomorphicAdd(addedPortionIfOne.negate(minerKey), minerKey);
+
+						pubInput[0] = new CryptoDataArray(new CryptoData[] {new ECPointData(remainder0.getCipher(minerKey)), new ECPointData(remainder0.getEphemeral(minerKey))});
+						pubInput[1] = new CryptoDataArray(new CryptoData[] {new ECPointData(remainder1.getCipher(minerKey)), new ECPointData(remainder1.getEphemeral(minerKey))});
+						try {
+							if(proof.verifyFiatShamir(new CryptoDataArray(pubInput), transcripts[j][0], transcripts[j][1], env)) {
+								
+							} else System.out.println("Fail ghfdkjshg");
+						} catch (MultipleTrueProofException | NoTrueProofException | ArraySizesDoNotMatchException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+					toReturn = newToReturn;
+				}
+			}
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		
+		return toReturn;
+	}
 }

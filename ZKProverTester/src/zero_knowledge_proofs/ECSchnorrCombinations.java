@@ -1,5 +1,8 @@
 package zero_knowledge_proofs;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.math.BigInteger;
 import java.util.InputMismatchException;
 
@@ -17,6 +20,8 @@ public class ECSchnorrCombinations extends ZKPProtocol {
 	//first dimension is the number of public values
 	//second dimension is number of discrete log problems in the term
 	//third is which generator and which exponent.
+	
+	//Examples:  Just Schnorr would be {{{0, 0}}}.  A Pedersen Commitment would be {{{0,0},{1,1}}}.  A Diffie Hellman would be {{{0,0}},{0, 1}}}.  An Exponential Elgamal Ciphertext would be {{{0, 0},{1,1}},{{0,1}}}
 	public ECSchnorrCombinations(int[][][] structure2){
 		this.structure = new int[structure2.length][][];
 		
@@ -119,10 +124,10 @@ public class ECSchnorrCombinations extends ZKPProtocol {
 //		for(int i = 0; i < secIn.length; i++) {
 //			sec[i] = secIn[i].getBigInt();
 //		}
-		BigInteger[] sec = new BigInteger[secIn.length/2];
-		for(int i = 0; i < secIn.length/2; i++) {
-		sec[i] = secIn[i].getBigInt();
-	}
+		BigInteger[] sec = new BigInteger[secIn.length];
+		for(int i = 0; i < secIn.length; i++) {
+			sec[i] = secIn[i].getBigInt();
+		}
 
 		ECPoint[] env = new ECPoint[envIn.length];
 		for(int i = 0; i < envIn.length; i++) {
@@ -134,7 +139,9 @@ public class ECSchnorrCombinations extends ZKPProtocol {
 		for(int i = 0; i < numPub; i++) {
 			a[i] = pub[i].multiply(challenge.negate());
 			for(int j = 0; j < structure[i].length; j++) {
-				a[i] = a[i].add(env[structure[i][j][0]].multiply(sec[structure[i][j][1]]));
+				ECPoint arg1 = env[structure[i][j][0]];
+				BigInteger arg2 = sec[structure[i][j][1]];
+				a[i] = a[i].add(arg1.multiply(arg2));
 			}
 			
 		}
