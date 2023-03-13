@@ -38,6 +38,7 @@ public class MinerThread implements Runnable {
 	private ProcessedBlockchain blockchain;
 	public long cpuTime;
 	private boolean leader = false;
+	private int numBallots;
 	
 	public MinerThread(AdditiveElgamalPrivKey minerPrivKey, AdditiveElgamalPubKey[] individualMinerKeys, ObjectInputStream[] in, ObjectOutputStream[] out) {
 		
@@ -51,19 +52,45 @@ public class MinerThread implements Runnable {
 		}
 		this.individualMinerKeys = individualMinerKeys;
 		
+
+		
+		
+		
+	}
+	
+	@Override
+	public void run() {
+		
+		
+		
+		ThreadMXBean threadTracker = ManagementFactory.getThreadMXBean();
+		threadTracker.setThreadCpuTimeEnabled(true);
+		
+		
 		if(in.length != 1) {
 			try {
 				if(in[0] == null) {
 					leader = true;
+					numBallots = in[1].readInt();
+					votes = new BallotT[numBallots];
 					blockchain = (ProcessedBlockchain) in[1].readObject();
-					votes = (BallotT[]) in[1].readObject();
+					for (int y = 0; y < numBallots; y++) {
+						votes[y] = (BallotT) in[1].readObject();
+					}
+					in[1].readBoolean();
 	//				AdditiveElgamalPubKey key = (AdditiveElgamalPubKey) in[1].readObject();
 				} else {
+					numBallots =  in[0].readInt();
+					votes = new BallotT[numBallots];
 					blockchain = (ProcessedBlockchain) in[0].readObject();
-					votes = (BallotT[]) in[0].readObject();
+					for (int y = 0; y < numBallots; y++) {
+						votes[y] = (BallotT) in[0].readObject();
+					}
+					in[0].readBoolean();
+					Thread.sleep(1000);
 	//				AdditiveElgamalPubKey key = (AdditiveElgamalPubKey) in[0].readObject();
 				}
-			} catch (ClassNotFoundException | IOException e) {
+			} catch (ClassNotFoundException | IOException | InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
@@ -72,37 +99,35 @@ public class MinerThread implements Runnable {
 			leader = true;
 
 			try {
+				numBallots = in[0].readInt();
+				votes = new BallotT[numBallots];
 				blockchain = (ProcessedBlockchain) in[0].readObject();
-				votes = (BallotT[]) in[0].readObject();
+				for (int y = 0; y < numBallots; y++) {
+					votes[y] = (BallotT) in[0].readObject();
+				}
+				in[0].readBoolean();
+				Thread.sleep(1000);
 				in[0] = null;
 				out[0] = null;
-			} catch (ClassNotFoundException | IOException e) {
+			} catch (ClassNotFoundException | IOException | InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 		
-		
-		
-	}
-	
-	@Override
-	public void run() {
-		ThreadMXBean threadTracker = ManagementFactory.getThreadMXBean();
-		threadTracker.setThreadCpuTimeEnabled(true);
-		
-		
 		long start = System.currentTimeMillis();
+		long startCpuTime = threadTracker.getCurrentThreadCpuTime();
+		
 		for(int i = 0; i < votes.length; i++) {
 			if(leader) System.out.print(i + " ");
 			votes[i].minerProcessBallot(blockchain, minerPrivKey,individualMinerKeys, in, out, rand);
 			blockchain.addTransaction(votes[i]);
 		}
 		
-		cpuTime = threadTracker.getCurrentThreadCpuTime();
+		cpuTime = threadTracker.getCurrentThreadCpuTime() - startCpuTime;
 		
 		if(leader) {
-			System.out.printf(", $d, ", System.currentTimeMillis() - start); //ysstart2
+			System.out.printf(", %d, ", System.currentTimeMillis() - start); //ysstart2 real time for mining onto blockchain
 			try {
 				
 				ByteArrayOutputStream out1 = new ByteArrayOutputStream();

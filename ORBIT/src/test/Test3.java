@@ -35,6 +35,7 @@ import transactions.BallotT;
 import transactions.BallotTransaction1;
 import transactions.BallotTransaction2;
 import transactions.BallotTransaction3Failed;
+import transactions.BallotTransaction4;
 import transactions.ElectionTransaction;
 import transactions.ProcessedBlockchain;
 import transactions.RegistrationTransaction;
@@ -140,6 +141,7 @@ public class Test3 {
 
 		ProcessedBlockchain blockchain = new ProcessedBlockchain();
 		BallotT[] ballots = Test3.createTransactions(election, encryptedVotes, blockchain, ringSize, rand);
+		int numBallots = ballots.length;
 
 		long start4 = System.currentTimeMillis();
 		//System.out.printf("%d, %d, %d, %d \n", start1-start0, start2-start1, start3-start2, start4-start3);
@@ -207,7 +209,13 @@ public class Test3 {
 					out[1][i].writeObject(blockchain);
 					out[1][i].flush();
 					out[1][i].reset();
-					out[1][i].writeObject(ballots);
+					for (int y = 0; y < numBallots; y++) {
+						out[1][i].writeObject(ballots[y]);
+						if(y%4 == 0) {
+							out[1][i].flush();
+							out[1][i].reset();
+						}
+					}
 					out[1][i].flush();
 					out[1][i].reset();
 				} else {
@@ -293,7 +301,7 @@ public class Test3 {
 				ring[j] = registration[mixin];
 				
 			}
-			ballots[i] = new BallotTransaction2(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
+			ballots[i] = new BallotTransaction4(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
 		}
 //		int last = encryptedVotes.length;
 //		int sourcePos = rand.nextInt(ringSize);

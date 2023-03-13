@@ -2,6 +2,8 @@ package test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectInputStream;
@@ -136,6 +138,31 @@ public class Test3Multi {
 		//ysSystem.out.printf("%d, %d, %d, ", start1-start0, start2-start1, start3-start2);
 		ProcessedBlockchain blockchain = new ProcessedBlockchain();
 		BallotT[] ballots = Test3.createTransactions(election, encryptedVotes, blockchain, ringSize, rand);
+		
+		FileOutputStream fileOut = null;
+		try {
+			fileOut = new FileOutputStream("ballotfile");
+			fileOut.write(5);
+		} catch (FileNotFoundException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		ObjectOutputStream outBallots;
+		try {
+			outBallots = new ObjectOutputStream(fileOut);
+			
+			outBallots.writeObject(ballots);
+			outBallots.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		int numBallots = ballots.length;
 		ObjectInputStream[][] in = new ObjectInputStream[miners][miners];
 		ObjectOutputStream[][] out = new ObjectOutputStream[miners][miners];
 		Socket[][] s = new Socket[miners][miners];
@@ -194,29 +221,76 @@ public class Test3Multi {
 			e.printStackTrace();
 		}
 		//ysSystem.err.println("End Test Writing Blockchain");
+		
+		MinerThread[] minerThreadDriver = new MinerThread[miners];
+		for(int i = 0; i < miners; i++) {
+			minerThreadDriver[i] = new MinerThread(minerPrivKeys[i], individualMinerKeys, in[i], out[i]);
+			minerThread[i] = new Thread(minerThreadDriver[i]);
+			minerThread[i].start();
+		}
+		long cpuTime = 0;
+		
 		if(miners != 1) {
 			for(int i = 0; i < miners; i++) {
 				try {
 					if(i == 0) {
 						
 	//					out[1][i].writeObject(minerKey);
+						out[1][i].writeInt(numBallots);
+						out[1][i].flush();
 						out[1][i].writeObject(blockchain);
 						out[1][i].flush();
 						out[1][i].reset();
-						out[1][i].writeObject(ballots);
+						for (int y = 0; y < numBallots; y++) {
+							out[1][i].writeObject(ballots[y]);
+							//if(y%4 == 0) {
+								out[1][i].flush();
+								out[1][i].reset();
+							//}
+						}
 						out[1][i].flush();
 						out[1][i].reset();
 					} else {
 	//					out[0][i].writeObject(minerKey);
+						out[0][i].writeInt(numBallots);
+						out[0][i].flush();
 						out[0][i].writeObject(blockchain);
 						out[0][i].flush();
 						out[0][i].reset();
-						out[0][i].writeObject(ballots);
+						for (int y = 0; y < numBallots; y++) {
+							out[0][i].writeObject(ballots[y]);
+							//if(y%4 == 0) {
+								out[0][i].flush();
+								out[0][i].reset();
+							//}
+						}
 						out[0][i].flush();
 						out[0][i].reset();
 					}
 				} catch (IOException e) {
 					e.printStackTrace();
+				}
+			}
+			for(int i = 0; i < miners; i++) {
+				if(i == 0) {
+					try {
+						out[1][0].writeBoolean(true);
+						out[1][0].flush();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					
+				}
+				else {
+					try {
+						out[0][i].writeBoolean(true);
+						out[0][i].flush();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					
 				}
 			}
 		} else {
@@ -225,10 +299,17 @@ public class Test3Multi {
 				PipedOutputStream pOut = new PipedOutputStream(pIn);
 				out[0][0] = new ObjectOutputStream(pOut);
 				in[0][0] = new ObjectInputStream(pIn);
+				out[0][0].writeInt(numBallots);
 				out[0][0].writeObject(blockchain);
 				out[0][0].flush();
 				out[0][0].reset();
-				out[0][0].writeObject(ballots);
+				for (int y = 0; y < numBallots; y++) {
+					out[0][0].writeObject(ballots[y]);
+					if(y%4 == 0) {
+						out[0][0].flush();
+						out[0][0].reset();
+					}
+				}
 				out[0][0].flush();
 				out[0][0].reset();
 			} catch (IOException e) {
@@ -236,13 +317,7 @@ public class Test3Multi {
 				e.printStackTrace();
 			}
 		}
-		MinerThread[] minerThreadDriver = new MinerThread[miners];
-		for(int i = 0; i < miners; i++) {
-			minerThreadDriver[i] = new MinerThread(minerPrivKeys[i], individualMinerKeys, in[i], out[i]);
-			minerThread[i] = new Thread(minerThreadDriver[i]);
-			minerThread[i].start();
-		}
-		long cpuTime = 0;
+		
 		for(int i = 0; i < miners; i++) {
 			try {
 				minerThread[i].join();
@@ -252,6 +327,6 @@ public class Test3Multi {
 				e.printStackTrace();
 			}
 		}
-		System.out.println(cpuTime); //ysend4
+		System.out.println(cpuTime); //ysend4 total CPU time it took ALL miner to process all BALLOTS
 	}
 }
