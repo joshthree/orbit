@@ -2,6 +2,10 @@ package test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectInputStream;
@@ -28,7 +32,6 @@ import zero_knowledge_proofs.CryptoData.ECCurveData;
 import zero_knowledge_proofs.CryptoData.ECPointData;
 
 public class MinerThread implements Runnable {
-	private BallotT[] votes;
 	private ObjectOutputStream[] out;
 	private ObjectInputStream[] in;
 	private AdditiveElgamalPrivKey minerPrivKey;
@@ -72,20 +75,12 @@ public class MinerThread implements Runnable {
 				if(in[0] == null) {
 					leader = true;
 					numBallots = in[1].readInt();
-					votes = new BallotT[numBallots];
 					blockchain = (ProcessedBlockchain) in[1].readObject();
-					for (int y = 0; y < numBallots; y++) {
-						votes[y] = (BallotT) in[1].readObject();
-					}
 					in[1].readBoolean();
 	//				AdditiveElgamalPubKey key = (AdditiveElgamalPubKey) in[1].readObject();
 				} else {
 					numBallots =  in[0].readInt();
-					votes = new BallotT[numBallots];
 					blockchain = (ProcessedBlockchain) in[0].readObject();
-					for (int y = 0; y < numBallots; y++) {
-						votes[y] = (BallotT) in[0].readObject();
-					}
 					in[0].readBoolean();
 					Thread.sleep(1000);
 	//				AdditiveElgamalPubKey key = (AdditiveElgamalPubKey) in[0].readObject();
@@ -100,11 +95,7 @@ public class MinerThread implements Runnable {
 
 			try {
 				numBallots = in[0].readInt();
-				votes = new BallotT[numBallots];
 				blockchain = (ProcessedBlockchain) in[0].readObject();
-				for (int y = 0; y < numBallots; y++) {
-					votes[y] = (BallotT) in[0].readObject();
-				}
 				in[0].readBoolean();
 				Thread.sleep(1000);
 				in[0] = null;
@@ -116,33 +107,49 @@ public class MinerThread implements Runnable {
 		}
 		
 		long start = System.currentTimeMillis();
-		long startCpuTime = threadTracker.getCurrentThreadCpuTime();
 		
-		for(int i = 0; i < votes.length; i++) {
-			if(leader) System.out.print(i + " ");
-			votes[i].minerProcessBallot(blockchain, minerPrivKey,individualMinerKeys, in, out, rand);
-			blockchain.addTransaction(votes[i]);
+		try {
+			File ballotfile = new File("ballotfile");
+			ObjectInputStream ballotIn = new ObjectInputStream(new FileInputStream(ballotfile));
+			if(leader) {
+				System.out.printf("%d,", ballotfile.length());
+			}
+			
+			ObjectOutputStream ballotOut = null;
+			
+			if(leader) {
+				File outFile = new File("outFile");
+				ballotOut = new ObjectOutputStream(new FileOutputStream(outFile));
+				
+			}
+		
+			for(int i = 0; i < numBallots; i++) {
+				if(leader) System.out.print(i + " ");
+				BallotT vote = (BallotT)ballotIn.readObject();
+				long startCpuTime = threadTracker.getCurrentThreadCpuTime();
+				vote.minerProcessBallot(blockchain, minerPrivKey,individualMinerKeys, in, out, rand);
+				cpuTime += threadTracker.getCurrentThreadCpuTime() - startCpuTime;
+				if(leader) {
+					ballotOut.writeObject(vote);
+				}
+				
+			}
+			ballotIn.close();
+			if(leader) {
+				ballotOut.close();
+			}
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-		
-		cpuTime = threadTracker.getCurrentThreadCpuTime() - startCpuTime;
 		
 		if(leader) {
 			System.out.printf(", %d, ", System.currentTimeMillis() - start); //ysstart2 real time for mining onto blockchain
-			try {
-				
-				ByteArrayOutputStream out1 = new ByteArrayOutputStream();
-				ObjectOutput out2 = new ObjectOutputStream(out1);
-				out2.writeObject(votes);
-				System.out.printf(out1.toByteArray().length+","); //ysafter3
-				ByteArrayInputStream in1 = new ByteArrayInputStream(out1.toByteArray());
-				ObjectInput in2 = new ObjectInputStream(in1);
-				in2.readObject();
-			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			File outFile = new File("outFile");		
+			System.out.printf("%d,", outFile.length()); //ysafter3
 		
 		}
 		

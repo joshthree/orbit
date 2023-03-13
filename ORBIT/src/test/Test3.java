@@ -2,6 +2,8 @@ package test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectInputStream;
@@ -140,8 +142,8 @@ public class Test3 {
 //		}
 
 		ProcessedBlockchain blockchain = new ProcessedBlockchain();
-		BallotT[] ballots = Test3.createTransactions(election, encryptedVotes, blockchain, ringSize, rand);
-		int numBallots = ballots.length;
+		Test3.createTransactions(election, encryptedVotes, blockchain, ringSize, rand);
+		int numBallots = encryptedVotes.length;
 
 		long start4 = System.currentTimeMillis();
 		//System.out.printf("%d, %d, %d, %d \n", start1-start0, start2-start1, start3-start2, start4-start3);
@@ -186,20 +188,6 @@ public class Test3 {
 		
 		Thread[] minerThread = new Thread[miners];
 		//System.err.println("Test Writing Blockchain");
-		ByteArrayOutputStream out1 = new ByteArrayOutputStream();
-		try {
-			ObjectOutput out2 = new ObjectOutputStream(out1);
-			out2.writeObject(ballots);
-			System.out.printf(out1.toByteArray().length+",");
-			ByteArrayInputStream in1 = new ByteArrayInputStream(out1.toByteArray());
-			ObjectInput in2 = new ObjectInputStream(in1);
-			in2.readObject();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 		//System.err.println("End Test Writing Blockchain");
 		for(int i = 0; i < miners; i++) {
 			try {
@@ -209,21 +197,9 @@ public class Test3 {
 					out[1][i].writeObject(blockchain);
 					out[1][i].flush();
 					out[1][i].reset();
-					for (int y = 0; y < numBallots; y++) {
-						out[1][i].writeObject(ballots[y]);
-						if(y%4 == 0) {
-							out[1][i].flush();
-							out[1][i].reset();
-						}
-					}
-					out[1][i].flush();
-					out[1][i].reset();
 				} else {
 //					out[0][i].writeObject(minerKey);
 					out[0][i].writeObject(blockchain);
-					out[0][i].flush();
-					out[0][i].reset();
-					out[0][i].writeObject(ballots);
 					out[0][i].flush();
 					out[0][i].reset();
 				}
@@ -246,7 +222,7 @@ public class Test3 {
 		}
 		
 	}
-	public static BallotT[] createTransactions(Election election, EncryptedVote[][] encryptedVotes, ProcessedBlockchain blockchain, int ringSize, SecureRandom rand) {
+	public static void createTransactions(Election election, EncryptedVote[][] encryptedVotes, ProcessedBlockchain blockchain, int ringSize, SecureRandom rand) {
 		ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("secp256k1");
 		ECCurve curve = spec.getCurve();
 		ECPoint g = spec.getG();
@@ -280,10 +256,29 @@ public class Test3 {
 
 
 		
-		
-		BallotT[] ballots = new BallotT[encryptedVotes.length];
+	
 
 		long time3 = System.currentTimeMillis();
+		
+		FileOutputStream fileOut = null;
+		try {
+			fileOut = new FileOutputStream("ballotfile");
+		} catch (FileNotFoundException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		ObjectOutputStream outBallots = null;
+		try {
+			outBallots = new ObjectOutputStream(fileOut);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		for(int i = 0; i < encryptedVotes.length; i++) {
 			int sourcePos = rand.nextInt(ringSize);
 			SourceTransaction[] ring = new SourceTransaction[ringSize];
@@ -301,8 +296,25 @@ public class Test3 {
 				ring[j] = registration[mixin];
 				
 			}
-			ballots[i] = new BallotTransaction4(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
+			BallotT ballot = new BallotTransaction4(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
+			try {
+				outBallots.writeObject(ballot);
+				if(i%5 == 0) {
+					outBallots.flush();
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
+		try {
+			outBallots.flush();
+			outBallots.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 //		int last = encryptedVotes.length;
 //		int sourcePos = rand.nextInt(ringSize);
 //		SourceTransaction[] ring = new SourceTransaction[ringSize];
@@ -331,16 +343,5 @@ public class Test3 {
 		
 		long time4 = System.currentTimeMillis();
 		//ysSystem.out.println(time4 - time3);
-		for(int i = 0; i < ballots.length; i++) {
-			if(!ballots[i].verifyTransaction(blockchain))
-			{
-				System.out.println("NOOOOO");
-			}
-		}
-
-
-		long time5 = System.currentTimeMillis();
-		//ysSystem.out.println(time5 - time4);
-		return ballots;
 	}
 }
