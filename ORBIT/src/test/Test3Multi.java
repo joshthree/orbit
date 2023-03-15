@@ -265,6 +265,18 @@ public class Test3Multi {
 				e.printStackTrace();
 			}
 		}
+		for(int i = 0; i < miners; i++) {
+			for(int j = 0; j < miners; j++) {
+				if(i == j) continue;
+				try {
+					in[i][j].close();
+					out[i][j].close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
 		System.out.println(cpuTime); //ysend4 total CPU time it took ALL miner to process all BALLOTS
 	}
 }

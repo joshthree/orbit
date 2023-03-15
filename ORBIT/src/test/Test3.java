@@ -221,7 +221,19 @@ public class Test3 {
 				e.printStackTrace();
 			}
 		}
-		
+
+		for(int i = 0; i < miners; i++) {
+			for(int j = 0; j < miners; j++) {
+				if(i == j) continue;
+				try {
+					in[i][j].close();
+					out[i][j].close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
 	}
 	public static void createTransactions(Election election, EncryptedVote[][] encryptedVotes, ProcessedBlockchain blockchain, int ringSize, SecureRandom rand) {
 		ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("secp256k1");
