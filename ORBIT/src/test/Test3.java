@@ -38,6 +38,7 @@ import transactions.BallotTransaction1;
 import transactions.BallotTransaction2;
 import transactions.BallotTransaction3Failed;
 import transactions.BallotTransaction4;
+import transactions.BallotTransaction4_1;
 import transactions.ElectionTransaction;
 import transactions.ProcessedBlockchain;
 import transactions.RegistrationTransaction;
@@ -296,7 +297,7 @@ public class Test3 {
 				ring[j] = registration[mixin];
 				
 			}
-			BallotT ballot = new BallotTransaction4(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
+			BallotT ballot = new BallotTransaction4_1(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
 			try {
 				outBallots.writeObject(ballot);
 				if(i%5 == 0) {
