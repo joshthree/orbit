@@ -42,6 +42,7 @@ public class MinerThread implements Runnable {
 	public long cpuTime;
 	private boolean leader = false;
 	private int numBallots;
+	private int threadNum;
 	
 	public MinerThread(AdditiveElgamalPrivKey minerPrivKey, AdditiveElgamalPubKey[] individualMinerKeys, ObjectInputStream[] in, ObjectOutputStream[] out) {
 		
@@ -50,6 +51,7 @@ public class MinerThread implements Runnable {
 		this.minerPrivKey = minerPrivKey;
 		for(int i = 0; i < in.length; i++) {
 			if(in[i] == null) {
+				threadNum = i;
 				rand = new SecureRandom(("oihjfdhsalgjfdsjgnfbds," + i).getBytes());
 				break;
 			}
@@ -130,6 +132,15 @@ public class MinerThread implements Runnable {
 		
 			for(int i = 0; i < numBallots; i++) {
 				if(leader) System.out.print(i + " ");
+
+				for(int j = 0; j  < in.length ; j++) {
+					if(in[j] != null) {
+						//in[j].reset();
+						out[j].flush();
+						out[j].reset();
+					}
+				}
+
 				BallotT vote = (BallotT)ballotIn.readObject();
 				long startCpuTime = threadTracker.getCurrentThreadCpuTime();
 				vote.minerProcessBallot(blockchain, minerPrivKey,individualMinerKeys, in, out, rand);
@@ -143,8 +154,8 @@ public class MinerThread implements Runnable {
 						ballotOut = new ObjectOutputStream(new FileOutputStream(outFile, true));
 					}
 				}
-				
 			}
+			
 			ballotIn.close();
 			if(leader) {
 				ballotOut.flush();
