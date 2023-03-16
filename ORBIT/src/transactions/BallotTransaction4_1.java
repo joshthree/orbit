@@ -1521,6 +1521,7 @@ public class BallotTransaction4_1 implements BallotT {
 					for(int j = 0; j < in.length; j++) {
 						if(out[j] != null) {
 							try {
+								out[j].reset();
 								out[j].writeObject(intermediatePasswordTables[i]);
 								out[j].flush();
 							} catch (IOException e) {

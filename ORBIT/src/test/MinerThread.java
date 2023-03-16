@@ -131,7 +131,7 @@ public class MinerThread implements Runnable {
 			}
 		
 			for(int i = 0; i < numBallots; i++) {
-				if(leader) System.out.print(i + " ");
+				if(leader) System.out.print("\n" + i + " ");
 
 				for(int j = 0; j  < in.length ; j++) {
 					if(in[j] != null) {
@@ -143,7 +143,9 @@ public class MinerThread implements Runnable {
 
 				BallotT vote = (BallotT)ballotIn.readObject();
 				long startCpuTime = threadTracker.getCurrentThreadCpuTime();
+				System.out.print("before");
 				vote.minerProcessBallot(blockchain, minerPrivKey,individualMinerKeys, in, out, rand);
+				System.out.print("after");
 				cpuTime += threadTracker.getCurrentThreadCpuTime() - startCpuTime;
 				if(leader) {
 					ballotOut.writeObject(vote);
