@@ -119,7 +119,7 @@ public class MinerThread implements Runnable {
 		
 		try {
 			File ballotfile = new File("ballotfile");
-			BufferedInputStream buf = new BufferedInputStream(new FileInputStream(ballotfile));
+			BufferedInputStream buf = new BufferedInputStream(new FileInputStream(ballotfile), 16777216);
 			ObjectInputStream ballotIn = new ObjectInputStream(buf);
 			if(leader) {
 				System.out.printf("%d,", ballotfile.length());
@@ -143,12 +143,10 @@ public class MinerThread implements Runnable {
 					}
 				}
 
-				BallotT vote = (BallotT)ballotIn.readObject();
-				if(leader) System.out.print("\n" + new Date() + " " + i + " " + vote.getKeyImage());
+				BallotT vote = (BallotT)ballotIn.readUnshared();
+				if(leader) System.out.print(i + " ");
 				long startCpuTime = threadTracker.getCurrentThreadCpuTime();
-				System.out.print("before");
 				vote.minerProcessBallot(blockchain, minerPrivKey,individualMinerKeys, in, out, rand);
-				System.out.print("after");
 				cpuTime += threadTracker.getCurrentThreadCpuTime() - startCpuTime;
 				if(leader) {
 					ballotOut.writeObject(vote);
@@ -160,10 +158,9 @@ public class MinerThread implements Runnable {
 						ballotOut = new ObjectOutputStream(new FileOutputStream(outFile, true));
 					}
 				} 
-				buf.mark(0);
-				buf.reset();
-//				ballotIn = new ObjectInputStream(buf);
-				
+//				buf.mark(0);
+//				buf.reset();
+//				buf.
 			}
 			
 			ballotIn.close();
