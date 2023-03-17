@@ -1,5 +1,6 @@
 package test;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -17,6 +18,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.Date;
 
 import org.bouncycastle.math.ec.ECCurve;
 import org.bouncycastle.math.ec.ECPoint;
@@ -117,7 +119,8 @@ public class MinerThread implements Runnable {
 		
 		try {
 			File ballotfile = new File("ballotfile");
-			ObjectInputStream ballotIn = new ObjectInputStream(new FileInputStream(ballotfile));
+			BufferedInputStream buf = new BufferedInputStream(new FileInputStream(ballotfile));
+			ObjectInputStream ballotIn = new ObjectInputStream(buf);
 			if(leader) {
 				System.out.printf("%d,", ballotfile.length());
 			}
@@ -131,7 +134,6 @@ public class MinerThread implements Runnable {
 			}
 		
 			for(int i = 0; i < numBallots; i++) {
-				if(leader) System.out.print("\n" + i + " ");
 
 				for(int j = 0; j  < in.length ; j++) {
 					if(in[j] != null) {
@@ -142,6 +144,7 @@ public class MinerThread implements Runnable {
 				}
 
 				BallotT vote = (BallotT)ballotIn.readObject();
+				if(leader) System.out.print("\n" + new Date() + " " + i + " " + vote.getKeyImage());
 				long startCpuTime = threadTracker.getCurrentThreadCpuTime();
 				System.out.print("before");
 				vote.minerProcessBallot(blockchain, minerPrivKey,individualMinerKeys, in, out, rand);
@@ -151,11 +154,16 @@ public class MinerThread implements Runnable {
 					ballotOut.writeObject(vote);
 					ballotOut.flush();
 					if((i-1)%10 == 0) {
+						
 						ballotOut.close();
 						File outFile = new File("outFile");
 						ballotOut = new ObjectOutputStream(new FileOutputStream(outFile, true));
 					}
-				}
+				} 
+				buf.mark(0);
+				buf.reset();
+//				ballotIn = new ObjectInputStream(buf);
+				
 			}
 			
 			ballotIn.close();
