@@ -51,7 +51,8 @@ public class BallotTransaction4 implements BallotT {
 	 */
 	private static final long serialVersionUID = -7088852042122442011L;
 	//Hashed
-	private SourceTransaction[] ringMembers;
+	private transient SourceTransaction[] ringMembers;
+	private long[] ringMembersPos;
 	private EncryptedVote[] voterVotes;
 	private Additive_Pub_Key voterKey;
 	private AdditiveCiphertext blindedPasswordOrigDecrypted;
@@ -101,6 +102,9 @@ public class BallotTransaction4 implements BallotT {
 		voterVotes = votes;
 		this.ringMembers = ringMembers;
 
+		for(int i = 0; i < ringMembers.length; i++) {
+			ringMembersPos[i] = ringMembers[i].getPosition();
+		}
 		//		//Testing encrypted vote rerandomization.
 		//		BigInteger[] r = election.getRace(0).generateRerandimizationValues(rand);
 		//		EncryptedVote rerandomized = votes[0].rerandomize(r, election.getRace(0).getPubKey());
@@ -264,7 +268,15 @@ public class BallotTransaction4 implements BallotT {
 		}
 
 	}
-
+	private void populateRingMembers(ProcessedBlockchain blockchain) {
+		if(ringMembers == null) {
+			ringMembers = new SourceTransaction[ringMembersPos.length];
+			for(int i = 0; i < ringMembers.length; i++) {
+				ringMembers[i] = (SourceTransaction) blockchain.getTransaction(ringMembersPos[i]);
+			}
+		}
+		
+	}
 	private CryptoData[] getVoterProverData(int source, Additive_Priv_Key newKey,
 			BigInteger password, BigInteger passwordDisplacement, SecureRandom rand, BigInteger sourceVoterPrivKey,
 			BigInteger oldKeyR, AdditiveElgamalPubKey minerKey, Additive_Pub_Key fullPasswordKey,
@@ -731,6 +743,7 @@ public class BallotTransaction4 implements BallotT {
 
 	@Override
 	public boolean verifyTransaction(ProcessedBlockchain b) {
+		populateRingMembers(b);
 		try {
 			ElectionTransaction electionTx = (ElectionTransaction) b.getTransaction((int) electionPos);
 			Election e = electionTx.getElection();
@@ -756,7 +769,7 @@ public class BallotTransaction4 implements BallotT {
 		byte[][] objectBytes = new byte[14][]; 
 		byte[][] ringMemberBytes = new byte[ringMembers.length][];
 		for(int i = 0; i < ringMembers.length; i++) {
-			ringMemberBytes[i] = ringMembers[i].getBytes();
+			ringMemberBytes[i] =  ByteBuffer.wrap(new byte[8]).putLong(ringMembersPos[i]).array();
 		}
 		objectBytes[0] = Arrays.concatenate(ringMemberBytes);
 
@@ -833,7 +846,8 @@ public class BallotTransaction4 implements BallotT {
 	@Override
 	public boolean minerProcessBallot(ProcessedBlockchain blockchain, AdditiveElgamalPrivKey minerPrivKey, AdditiveElgamalPubKey[] individualMinerKeys, ObjectInputStream[] in, ObjectOutputStream[] out, SecureRandom rand) {
 		int party = -1;
-		
+
+		populateRingMembers(blockchain);
 		Election election = ((ElectionTransaction) blockchain.getTransaction((int) electionPos)).getElection();
 		AdditiveElgamalPubKey minerKey = election.getMinerKey();
 		AdditiveElgamalCiphertext passwordDifferenceCipher = (AdditiveElgamalCiphertext) this.blindedPasswordOrigDecrypted.homomorphicAdd(this.blindedPasswordGuessDecrypted.negate(minerKey), voterKey);

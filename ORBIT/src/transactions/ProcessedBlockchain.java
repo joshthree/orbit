@@ -17,8 +17,8 @@ public class ProcessedBlockchain implements Serializable {
 		transaction = new ArrayList<Transaction>();
 	}
 	
-	public Transaction getTransaction(int i) {
-		return transaction.get(i);
+	public Transaction getTransaction(long ringMembersPos) {
+		return transaction.get((int) ringMembersPos);
 	}
 	public void addTransaction(Transaction t) {
 		t.setPosition(transaction.size());

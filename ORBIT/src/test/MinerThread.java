@@ -1,24 +1,16 @@
 package test;
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ObjectInput;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.security.SecureRandom;
-import java.util.Arrays;
-import java.util.Date;
 
 import org.bouncycastle.math.ec.ECCurve;
 import org.bouncycastle.math.ec.ECPoint;
@@ -137,7 +129,6 @@ public class MinerThread implements Runnable {
 
 				for(int j = 0; j  < in.length ; j++) {
 					if(in[j] != null) {
-						//in[j].reset();
 						out[j].flush();
 						out[j].reset();
 					}
@@ -151,12 +142,13 @@ public class MinerThread implements Runnable {
 				if(leader) {
 					ballotOut.writeObject(vote);
 					ballotOut.flush();
-					if((i-1)%10 == 0) {
-						
-						ballotOut.close();
-						File outFile = new File("outFile");
-						ballotOut = new ObjectOutputStream(new FileOutputStream(outFile, true));
-					}
+					ballotOut.reset();
+//					if((i-1)%10 == 0) {
+//						
+//						ballotOut.close();
+//						File outFile = new File("outFile");
+//						ballotOut = new ObjectOutputStream(new FileOutputStream(outFile, true));
+//					}
 				} 
 //				buf.mark(0);
 //				buf.reset();
