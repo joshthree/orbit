@@ -6,9 +6,9 @@ public class Experiment1 {
 		arguments[0] = "40";// numRaces = 4;
 		arguments[1] = "4";// numCandidates = 4;
 		arguments[2] = "50";// numVotes = 50;
-		arguments[3] = "10";// miners = 10;
+		arguments[3] = "50";// miners = 10;
 		arguments[4] = "15";// ringSize = 15;
-		int[] numRaces = {1, 2, 100, 20, 40, 60, 80};
+		int[] numRaces = {1, 2, 20, 40, 60, 80, 100};
 		for (int i = 0; i < numRaces.length; i++) {
 			arguments[2] = String.valueOf(numRaces[i]); // numRaces = y;
 			System.out.printf("%d,", numRaces[i]);

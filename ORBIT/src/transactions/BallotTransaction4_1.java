@@ -1041,7 +1041,18 @@ public class BallotTransaction4_1 implements BallotT {
 					if(countEqual == i || countUnequal == i) {
 						retry = true;
 						if(in[0] == null) {
-						System.out.print("reshuffle required");
+							System.out.print("reshuffle required");
+						}
+						try {
+							for(int j = 0; j < in.length; j++) {
+								if(out[j] != null) {
+									out[j].flush();
+									out[j].reset();
+								}
+							}
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
 						}
 						break;
 					}
@@ -1150,6 +1161,8 @@ public class BallotTransaction4_1 implements BallotT {
 			dummyTable0[1] = new ElectionTableRowInner(minerKey.encrypt(BigInteger.ONE, BigInteger.ZERO), null, tableOmega);
 			int[] order = MinerThread.chooseOrder(in, out, minerKey, rand);
 			for(int i = 0; i < in.length; i++) {
+
+				if(in[0] == null) System.out.print((char)('a' + i%26));
 				ElectionTableRowInner[] orig;
 				if(i == 0) orig = dummyTable0;
 				else orig = intermediateDummyTables[i-1];
@@ -1511,6 +1524,8 @@ public class BallotTransaction4_1 implements BallotT {
 			passwordProofTranscripts = new CryptoData[in.length][];
 			int[] order = MinerThread.chooseOrder(in, out, minerKey, rand);
 			for(int i = 0; i < in.length; i++) {
+
+				if(in[0] == null) System.out.print((char)('A' + i%26));
 				ElectionTableRowInner[] orig;
 				if(i == 0) orig = passwordTable;
 				else orig = intermediatePasswordTables[i-1];
@@ -2315,6 +2330,7 @@ public class BallotTransaction4_1 implements BallotT {
 		//		ParallelVerifier[] verifierObs = new ParallelVerifier[in.length];
 		table2s[order[order.length-1]] = table1;
 		for(int i = 0; i < in.length; i++) {
+
 			int index = order[i];
 			int prev;
 			if(i == 0) {

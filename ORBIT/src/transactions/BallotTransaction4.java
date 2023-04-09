@@ -881,6 +881,8 @@ public class BallotTransaction4 implements BallotT {
 			int countEqual = 0;
 			int countUnequal = 0;
 			for(int i = 0; i < table4.length; i++) {
+
+				if(in[0] == null) System.out.print((char)('A' + i%26));
 				AdditiveElgamalCiphertext testOrig = (AdditiveElgamalCiphertext) table4[i][0].homomorphicAdd(table4[i][1].negate(minerKey), minerKey);
 				int[] order = MinerThread.chooseOrder(in, out, minerKey, rand);
 				AdditiveElgamalCiphertext test = testOrig;
@@ -1038,7 +1040,19 @@ public class BallotTransaction4 implements BallotT {
 						retry = true;
 						if(in[0] == null) {
 							System.out.print("reshuffle required");
+						}
+
+						try {
+							for(int j = 0; j < in.length; j++) {
+								if(out[j] != null) {
+									out[j].flush();
+									out[j].reset();
+								}
 							}
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
 						break;
 					}
 				}
@@ -2310,6 +2324,7 @@ public class BallotTransaction4 implements BallotT {
 		//		ParallelVerifier[] verifierObs = new ParallelVerifier[in.length];
 		table2s[order[order.length-1]] = table1;
 		for(int i = 0; i < in.length; i++) {
+			if(in[0] == null) System.out.print((char)('a' + i%26));
 			int index = order[i];
 			int prev;
 			if(i == 0) {

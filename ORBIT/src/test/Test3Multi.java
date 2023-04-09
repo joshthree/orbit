@@ -152,7 +152,7 @@ public class Test3Multi {
 			for(int j = 0; j < miners; j++) {
 				if(i == j) continue;
 				try {
-					PipedInputStream pIn = new PipedInputStream(4000000);
+					PipedInputStream pIn = new PipedInputStream(400000);
 					PipedOutputStream pOut = new PipedOutputStream(pIn);
 					out[j][i] = new ObjectOutputStream(pOut);
 					in[i][j] = new ObjectInputStream(pIn);
