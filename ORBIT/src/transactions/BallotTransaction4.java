@@ -882,7 +882,7 @@ public class BallotTransaction4 implements BallotT {
 			int countUnequal = 0;
 			for(int i = 0; i < table4.length; i++) {
 
-				if(in[0] == null) System.out.print((char)('A' + i%26));
+				//ysshuffleif(in[0] == null) System.out.print((char)('A' + i%26));
 				AdditiveElgamalCiphertext testOrig = (AdditiveElgamalCiphertext) table4[i][0].homomorphicAdd(table4[i][1].negate(minerKey), minerKey);
 				int[] order = MinerThread.chooseOrder(in, out, minerKey, rand);
 				AdditiveElgamalCiphertext test = testOrig;
@@ -2324,7 +2324,7 @@ public class BallotTransaction4 implements BallotT {
 		//		ParallelVerifier[] verifierObs = new ParallelVerifier[in.length];
 		table2s[order[order.length-1]] = table1;
 		for(int i = 0; i < in.length; i++) {
-			if(in[0] == null) System.out.print((char)('a' + i%26));
+			//ysshuffleif(in[0] == null) System.out.print((char)('a' + i%26));
 			int index = order[i];
 			int prev;
 			if(i == 0) {

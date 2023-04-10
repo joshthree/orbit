@@ -2,6 +2,7 @@ package test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -218,6 +219,7 @@ public class Test3Multi {
 					e.printStackTrace();
 				}
 			}
+			
 			for(int i = 0; i < miners; i++) {
 				if(i == 0) {
 					try {

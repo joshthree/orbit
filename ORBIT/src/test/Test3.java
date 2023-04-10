@@ -2,6 +2,7 @@ package test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -309,7 +310,7 @@ public class Test3 {
 				ring[j] = registration[mixin];
 				
 			}
-			BallotT ballot = new BallotTransaction4_1(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
+			BallotT ballot = new BallotTransaction4(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
 			try {
 				outBallots.writeUnshared(ballot);
 				if(i%5 == 0) {
@@ -328,6 +329,7 @@ public class Test3 {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
 		
 //		int last = encryptedVotes.length;
 //		int sourcePos = rand.nextInt(ringSize);
@@ -356,6 +358,6 @@ public class Test3 {
 		
 		
 		long time4 = System.currentTimeMillis();
-		//ysSystem.out.println(time4 - time3);
+		System.out.printf("%d,",time4 - time3); //ys-1ballot creation time
 	}
 }

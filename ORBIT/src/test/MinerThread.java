@@ -114,7 +114,7 @@ public class MinerThread implements Runnable {
 			BufferedInputStream buf = new BufferedInputStream(new FileInputStream(ballotfile), 16777216);
 			ObjectInputStream ballotIn = new ObjectInputStream(buf);
 			if(leader) {
-				System.out.printf("%d,", ballotfile.length());
+				System.out.printf("%d,", ballotfile.length()); //ys1before ballot size before
 			}
 			
 			ObjectOutputStream ballotOut = null;
