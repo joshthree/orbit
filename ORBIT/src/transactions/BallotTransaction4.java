@@ -101,7 +101,7 @@ public class BallotTransaction4 implements BallotT {
 		electionID = electionTx.getPosition();
 		voterVotes = votes;
 		this.ringMembers = ringMembers;
-
+		this.ringMembersPos = new long[ringMembers.length];
 		for(int i = 0; i < ringMembers.length; i++) {
 			ringMembersPos[i] = ringMembers[i].getPosition();
 		}
@@ -165,8 +165,7 @@ public class BallotTransaction4 implements BallotT {
 		AdditiveElgamalPubKey minerKey = election.getMinerKey();
 		Additive_Pub_Key fullPasswordKey = minerKey.combineKeys(voterKey);
 		encryptedOldKey = fullPasswordKey.encrypt(sourceVoterPrivKey, oldKeyR);
-		BigInteger passwordR = fullPasswordKey.generateEphemeral(rand);
-		passwordGuessCipher = fullPasswordKey.encrypt(passwordGuess, passwordR);
+		
 
 		//Step 3:
 		AdditiveCiphertext origDummy1 = ringMembers[source].getDummyFlag();
@@ -184,6 +183,8 @@ public class BallotTransaction4 implements BallotT {
 		//Step 4: in arguments
 
 		//Step 5:
+		BigInteger passwordR = fullPasswordKey.generateEphemeral(rand);
+		passwordGuessCipher = fullPasswordKey.encrypt(passwordGuess, passwordR);
 
 		//Step 6:
 		MessageDigest fastHashDigest = null;
@@ -199,7 +200,7 @@ public class BallotTransaction4 implements BallotT {
 		ECPoint h1 = curve.decodePoint(fullPasswordKey.getPublicKey());
 		byte[] keyImageBaseHash = fastHashDigest.digest(ringMembers[source].getVoterPubKey().getPublicKey());
 		ECPoint keyImageBase = g.multiply(new BigInteger(keyImageBaseHash).mod(minerKey.getOrder()));
-		keyImage = keyImageBase.multiply(sourceVoterPrivKey.add(passwordGuess).mod(minerKey.getOrder()));
+		keyImage = keyImageBase.multiply(sourceVoterPrivKey.add(passwordGuess).mod(minerKey.getOrder())); //ys TODO multiply passwordGuess
 		keyImageBytes = keyImage.getEncoded(true);
 		//TODO Should be direct Hash to Point, but this will do for now
 
@@ -232,7 +233,6 @@ public class BallotTransaction4 implements BallotT {
 
 		voterProofs = null;
 		try {
-			System.out.flush();
 			voterProofs = fullProof.proveFiatShamir(fullProofData[0], fullProofData[1], fullProofData[2]);
 			//			ByteArrayOutputStream out1 = new ByteArrayOutputStream();
 			//			ObjectOutputStream out = new ObjectOutputStream(out1);
@@ -724,7 +724,7 @@ public class BallotTransaction4 implements BallotT {
 	@Override
 	public AdditiveCiphertext getPasswordCiphertext() {
 		// TODO Auto-generated method stub
-		return null;
+		return password;
 	}
 
 	@Override
@@ -850,40 +850,54 @@ public class BallotTransaction4 implements BallotT {
 		populateRingMembers(blockchain);
 		Election election = ((ElectionTransaction) blockchain.getTransaction((int) electionPos)).getElection();
 		AdditiveElgamalPubKey minerKey = election.getMinerKey();
+		
+		//Beginning for Dummy Protocol Step 2
+		
+		//Step 1
 		AdditiveElgamalCiphertext passwordDifferenceCipher = (AdditiveElgamalCiphertext) this.blindedPasswordOrigDecrypted.homomorphicAdd(this.blindedPasswordGuessDecrypted.negate(minerKey), voterKey);
 
 		ECCurve curve = minerKey.getCurve();
 		ECPoint g = minerKey.getG();
 
 		int rowCount = election.getRowCount();
-		int abbridgedRowCount = election.getAbbridgedRowCount();
+		int abbridgedRowCount = election.getAbbridgedRowCount(); //abbridgedRowCount is mew
 		boolean retry = false;
 		do {
 			tableOmega = null;
 			retry = false;
-			AdditiveCiphertext[] table1 = randomBits(abbridgedRowCount-1, minerKey, rand, out, in);
-			AdditiveCiphertext[][] table3 = new AdditiveElgamalCiphertext[election.getAbbridgedRowCount()][3];
+			
+			//Step 2
+			AdditiveCiphertext[] table0 = randomBits(abbridgedRowCount-1, minerKey, rand, out, in);
+			
+			//Step 3
+			AdditiveCiphertext[][] table1 = new AdditiveElgamalCiphertext[election.getAbbridgedRowCount()][3];
 			for(int i = 0; i < abbridgedRowCount-1; i++) {
-				table3[i][0] = minerKey.encrypt(BigInteger.valueOf(i+1), BigInteger.ZERO).homomorphicAdd(table1[i], minerKey);
-				table3[i][1] = minerKey.encrypt(BigInteger.valueOf(i+1), BigInteger.ZERO);
-				table3[i][2] = minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO);
+				table1[i][0] = minerKey.encrypt(BigInteger.valueOf(i+1), BigInteger.ZERO).homomorphicAdd(table0[i], minerKey);
+				table1[i][1] = minerKey.encrypt(BigInteger.valueOf(i+1), BigInteger.ZERO);
+				table1[i][2] = minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO);
 			}
-			table3[abbridgedRowCount-1][0] = passwordDifferenceCipher;
-			table3[abbridgedRowCount-1][1] = minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO);
-			table3[abbridgedRowCount-1][2] = minerKey.encrypt(BigInteger.ONE, BigInteger.ZERO);
+			table1[abbridgedRowCount-1][0] = passwordDifferenceCipher;
+			table1[abbridgedRowCount-1][1] = minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO);
+			table1[abbridgedRowCount-1][2] = minerKey.encrypt(BigInteger.ONE, BigInteger.ZERO);
 
-			AdditiveCiphertext[][] table4 = shuffleInternal(table3, in, out, minerKey, rand);
+			
+			//Step 4
+			AdditiveCiphertext[][] table2 = shuffleInternal(table1, in, out, minerKey, rand);
 
-			if(table4 == null) return false;
+			if(table2 == null) return false;
 
 			ZKPProtocol proofOfStuff = new ECEqualDiscreteLogsProver();
+			
+			//Step 5
 			tableOmega = passwordDifferenceCipher;
 			int countEqual = 0;
 			int countUnequal = 0;
-			for(int i = 0; i < table4.length; i++) {
+			
+			//Step 6
+			for(int i = 0; i < table2.length; i++) {
 
 				//ysshuffleif(in[0] == null) System.out.print((char)('A' + i%26));
-				AdditiveElgamalCiphertext testOrig = (AdditiveElgamalCiphertext) table4[i][0].homomorphicAdd(table4[i][1].negate(minerKey), minerKey);
+				AdditiveElgamalCiphertext testOrig = (AdditiveElgamalCiphertext) table2[i][0].homomorphicAdd(table2[i][1].negate(minerKey), minerKey);
 				int[] order = MinerThread.chooseOrder(in, out, minerKey, rand);
 				AdditiveElgamalCiphertext test = testOrig;
 
@@ -1029,12 +1043,15 @@ public class BallotTransaction4 implements BallotT {
 						}
 					}
 				}
+				
+				//Step 6.1
 				if(curve.getInfinity().equals(test.getCipher(minerKey))) {
-					tableOmega = tableOmega.homomorphicAdd(table4[i][2], minerKey);
+					tableOmega = tableOmega.homomorphicAdd(table2[i][2], minerKey);
 					countEqual++;
 				}else {
 					countUnequal++;
 				}
+				//Step 6.2
 				if(i == election.getResetRowCount()) {
 					if(countEqual == i || countUnequal == i) {
 						retry = true;
@@ -1134,6 +1151,10 @@ public class BallotTransaction4 implements BallotT {
 			//				System.out.printf("Bad password: %s != %s\n", test.getCipher(minerKey), g);
 			//			}
 		} while(retry);
+		
+		
+		
+		//Dummy Protocol Step 3
 
 		EncryptedVote[] zeroVote = new EncryptedVote[voterVotes.length];
 		EncryptedVote[] voterVoteWithoutProof = new EncryptedVote[voterVotes.length];
@@ -1155,9 +1176,10 @@ public class BallotTransaction4 implements BallotT {
 			
 			intermediateDummyTables = new ElectionTableRowInner[in.length][];
 			dummyProofTranscripts = new CryptoData[in.length][];
-			ElectionTableRowInner[] dummyTable0 = new ElectionTableRowInner[2];		
-			dummyTable0[0] = new ElectionTableRowInner(minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO), null, passwordDifferenceCipher);
-			dummyTable0[1] = new ElectionTableRowInner(minerKey.encrypt(BigInteger.ONE, BigInteger.ZERO), null, tableOmega);
+			ElectionTableRowInner[] dummyTable0 = new ElectionTableRowInner[2];
+			//Step 1.
+			dummyTable0[0] = new ElectionTableRowInner(minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO).homomorphicAdd(origDummy2,minerKey), null, passwordDifferenceCipher);
+			dummyTable0[1] = new ElectionTableRowInner(minerKey.encrypt(BigInteger.ONE.negate(), BigInteger.ZERO).homomorphicAdd(origDummy2,minerKey), null, tableOmega);
 			int[] order = MinerThread.chooseOrder(in, out, minerKey, rand);
 			for(int i = 0; i < in.length; i++) {
 				ElectionTableRowInner[] orig;
@@ -1496,7 +1518,7 @@ public class BallotTransaction4 implements BallotT {
 		
 		ElectionTableRowInner[] passwordTable = new ElectionTableRowInner[2];
 		passwordTable[0] = new ElectionTableRowInner(minerKey.getEmptyCiphertext().homomorphicAdd(dummyTableOutput.negate(minerKey), minerKey), voterVotes, dummyFlagOutput);
-		passwordTable[1] = new ElectionTableRowInner(tableOmega.homomorphicAdd(passwordDifferenceCipher.negate(minerKey), minerKey), zeroVote, minerKey.encrypt(BigInteger.ONE, BigInteger.ZERO));
+		passwordTable[1] = new ElectionTableRowInner(tableOmega.homomorphicAdd(dummyTableOutput.negate(minerKey), minerKey), zeroVote, minerKey.encrypt(BigInteger.ONE, BigInteger.ZERO));
 		//Shuffle Table
 		
 		{
