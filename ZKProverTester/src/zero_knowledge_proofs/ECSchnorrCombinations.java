@@ -21,7 +21,7 @@ public class ECSchnorrCombinations extends ZKPProtocol {
 	//second dimension is number of discrete log problems in the term
 	//third is which generator and which exponent.
 	
-	//Examples:  Just Schnorr would be {{{0, 0}}}.  A Pedersen Commitment would be {{{0,0},{1,1}}}.  A Diffie Hellman would be {{{0,0}},{0, 1}}}.  An Exponential Elgamal Ciphertext would be {{{0, 0},{1,1}},{{0,1}}}
+	//Examples:  Just Schnorr would be {{{0, 0}}}.  A Pedersen Commitment would be {{{0,0},{1,1}}}.  A Diffie Hellman would be {{{0,0}},{{0, 1}}}.  An Exponential Elgamal Ciphertext would be {{{0, 0},{1,1}},{{0,1}}}
 	public ECSchnorrCombinations(int[][][] structure2){
 		this.structure = new int[structure2.length][][];
 		
@@ -31,7 +31,7 @@ public class ECSchnorrCombinations extends ZKPProtocol {
 			structure[i] = new int[structure2[i].length][2];
 			for(int j = 0; j < structure[i].length; j++) {
 				if(structure2[i][j].length != 2) {
-					throw new InputMismatchException(String.format("Term %d, generator %d has %d values, not 2 (1 generator and 1 exponent).", i, j, structure2[i][j].length));
+					throw new InputMismatchException(String.format("Term %d, subterm %d has %d values, not 2 (1 generator and 1 exponent).", i, j, structure2[i][j].length));
 				}
 				//TODO:  Should I check to make sure that every generator index is used?
 				if(structure2[i][j][0] < 0) throw new InputMismatchException(String.format("Term %d, generator %d has negative generator index %d", i, j, structure2[i][j][0]));
@@ -91,6 +91,7 @@ public class ECSchnorrCombinations extends ZKPProtocol {
 		for(int i = 0; i < numPub; i++) {
 			a[i] = curve.getInfinity();
 			for(int j = 0; j < structure[i].length; j++) {
+//				System.out.printf("a = %d, env = %d, sec = %d, struct = %d,struct[i][j][0] = %d, struct[i][j][1] = %d\n", a.length, env.length, sec.length, structure.length, structure[i][j][0], structure[i][j][1]);
 				a[i] = a[i].add(env[structure[i][j][0]].multiply(sec[structure[i][j][1]]));
 			}
 		}
