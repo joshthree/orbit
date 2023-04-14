@@ -8,7 +8,7 @@ public class Experiment1 {
 		arguments[2] = "50";// numVotes = 50;
 		arguments[3] = "20";// miners = 10;
 		arguments[4] = "15";// ringSize = 15;
-		int[] numRaces = {1, 2, 100};
+		int[] numRaces = {4, 2, 100};
 		int[] numMiners = {5,50,30,20,10};
 		for (int j = 0; j < numMiners.length; j++) {
 			arguments[3] = String.valueOf(numMiners[j]);

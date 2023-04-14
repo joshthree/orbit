@@ -61,7 +61,7 @@ public class BallotTransaction5_1 implements BallotT {
 	private AdditiveCiphertext blindedPasswordGuessDecrypted;
 	private AdditiveCiphertext encryptedOldKey;
 	private AdditiveCiphertext origDummy2;
-	private AdditiveCiphertext origPassword2;
+	private AdditiveCiphertext origPassword2; 
 	private AdditiveCiphertext passwordGuessCipher;
 	private AdditiveCiphertext origPassword2Blinded;
 	private AdditiveCiphertext passwordGuessCipherBlinded;
@@ -312,7 +312,7 @@ public class BallotTransaction5_1 implements BallotT {
 			}
 
 			ECPoint signingPub = curve.decodePoint(ringMembers[i].getVoterPubKey().getPublicKey());
-			{	
+			{
 				Additive_Pub_Key origPassPubRing = minerKey.combineKeys(ringMembers[i].getVoterPubKey());
 				CryptoData[] proofOfMatchingDataInner = new CryptoData[3];
 				AdditiveElgamalCiphertext newCipher = (AdditiveElgamalCiphertext) encryptedOldKey.homomorphicAdd(new AdditiveElgamalCiphertext(signingPub, curve.getInfinity()).negate(origPassPubRing),origPassPubRing);
@@ -2034,7 +2034,7 @@ public class BallotTransaction5_1 implements BallotT {
 				for(int j = 1; j < in.length; j++) {
 					combinedCiphers[i] = combinedCiphers[i].homomorphicAdd(ciphertextSet1[j][i], minerKey);
 				}
-				combinedCiphers[i].homomorphicAdd(inverseDummy, minerKey);
+				combinedCiphers[i] = combinedCiphers[i].homomorphicAdd(inverseDummy, minerKey);
 			}
 			//start decrypting with next party first
 			AdditiveElgamalCiphertext current = combinedCiphers[(party+in.length-1) % in.length];
@@ -2092,7 +2092,7 @@ public class BallotTransaction5_1 implements BallotT {
 					myVersion[j] = myVersion[j].homomorphicAdd(otherVote[j], election.getRace(j).getPubKey());
 				}
 			}
-			
+
 			//Parties now have plaintexts that match their ciphertexts.  Now prove that the alterations to voterVotes are legitimate.  Cooperative zero knowledge proof.
 			ArrayList<int[][]> struct = new ArrayList<int[][]>();
 			//g is 0, ephemeral portion of sum is 1, raceKey is 2. 
@@ -2120,7 +2120,7 @@ public class BallotTransaction5_1 implements BallotT {
 			ZKPProtocol weirdProof = new ECSchnorrCombinations(structure);
 			CryptoData[] weirdProofProverData = new CryptoData[3];
 			{
-				
+
 				CryptoData[] pubData = new CryptoData[pubCounter];
 				pubData[0] = new ECPointData(minerKey.getY());
 				pubData[1] = new ECPointData(totalCipher.getCipher(minerKey));
@@ -2160,7 +2160,7 @@ public class BallotTransaction5_1 implements BallotT {
 					for(int j = 0; j < ciphertexts.length; j++) {
 						envData[counter+2*j] = new ECPointData(((AdditiveElgamalCiphertext)ciphertexts[j]).getCipher(raceKey));
 						envData[counter+2*j+1] = new ECPointData(((AdditiveElgamalCiphertext)ciphertexts[j]).getEphemeral(raceKey));
-						
+
 					}
 					counter += 2*ciphertexts.length;
 				}
@@ -2198,8 +2198,8 @@ public class BallotTransaction5_1 implements BallotT {
 						unaltered[j] = new BigIntData((unaltered[j].getBigInt().add(otherUnaltered[j].getBigInt())).mod(curve.getOrder()));
 					}
 				}
-				
-				
+
+
 				transcript[1] = new CryptoDataArray(unaltered);
 				if(weirdProof.verifyFiatShamir(weirdProofProverData[0], transcript[0], transcript[1], weirdProofProverData[2])) {
 				} else {
@@ -2208,8 +2208,8 @@ public class BallotTransaction5_1 implements BallotT {
 						System.out.println("bad challenge?");
 					}
 				}
-				
-				
+
+
 				for(int j = 0; j < myVersion.length; j++) {
 					Additive_Pub_Key raceKey = election.getRace(j).getPubKey();
 					myVersion[j] = myVersion[j].scalarMultiply(BigInteger.valueOf(in.length).modInverse(raceKey.getOrder()), raceKey);
@@ -2217,19 +2217,170 @@ public class BallotTransaction5_1 implements BallotT {
 				longProofTranscript = transcript;
 				countedVotes = myVersion;
 			}
+			boolean debug = false;
+			if(debug) {
+				if(party == 0) {
+					System.out.println();
+					System.out.println("Checking ballot:");
+					System.out.println("Source was dummy?");
+				}
+				{
+					ECPoint blah = ((AdditiveElgamalCiphertext) origDummy2).getEphemeral(minerKey).multiply(minerPrivKey.getPrivKey()[0].negate());
+					AdditiveElgamalCiphertext decrypted = (AdditiveElgamalCiphertext) origDummy2;
+					for(int i = 1; i < in.length; i++) {
+						out[(i+party) % in.length].writeObject(blah.getEncoded(true));
+					}
+					decrypted = decrypted.homomorphicAdd(new AdditiveElgamalCiphertext(blah, curve.getInfinity()), minerKey);
+					for(int i = 1; i < in.length; i++) {
+						out[(i+party) % in.length].flush();
+					}
+					for(int i = in.length-1; i >= 1; i--) {
+						ECPoint blah2 = curve.decodePoint((byte[]) in[(i+party) % in.length].readObject());
+						decrypted = decrypted.homomorphicAdd(new AdditiveElgamalCiphertext(blah2, curve.getInfinity()), minerKey);
+					}
+					if(party == 0) {
+						if(g.equals(decrypted.getCipher(minerKey))) {
+							System.out.println("\tYes");
+						} else System.out.println("\tNo");
+					}
+				}
+				if(party == 0) {
+					System.out.println("Did passwords match?");
+				}
+				{
+					AdditiveElgamalCiphertext decrypted = ((AdditiveElgamalCiphertext) blindedPasswordOrigDecrypted.homomorphicAdd(blindedPasswordGuessDecrypted.negate(minerKey), minerKey));
+					ECPoint blah = decrypted.getEphemeral(minerKey).multiply(minerPrivKey.getPrivKey()[0].negate());
+					for(int i = 1; i < in.length; i++) {
+						out[(i+party) % in.length].writeObject(blah.getEncoded(true));
+					}
+					decrypted = decrypted.homomorphicAdd(new AdditiveElgamalCiphertext(blah, curve.getInfinity()), minerKey);
+					for(int i = 1; i < in.length; i++) {
+						out[(i+party) % in.length].flush();
+					}
+					for(int i = in.length-1; i >= 1; i--) {
+						ECPoint blah2 = curve.decodePoint((byte[]) in[(i+party) % in.length].readObject());
+						decrypted = decrypted.homomorphicAdd(new AdditiveElgamalCiphertext(blah2, curve.getInfinity()), minerKey);
+					}
+					if(party == 0) {
+						if(curve.getInfinity().equals(decrypted.getCipher(minerKey))) {
+							System.out.println("\tYes");
+						} else System.out.println("\tNo " + decrypted.getCipher(minerKey).normalize());
+					}
+				}
+				if(party == 0) {
+					System.out.println("Is result dummy?");
+				}
+				boolean isDummy = false;
+				{
+					AdditiveElgamalCiphertext decrypted = dummyFlag; 
+					ECPoint blah = ((AdditiveElgamalCiphertext) decrypted).getEphemeral(minerKey).multiply(minerPrivKey.getPrivKey()[0].negate());
+					for(int i = 1; i < in.length; i++) {
+						out[(i+party) % in.length].writeObject(blah.getEncoded(true));
+					}
+					decrypted = decrypted.homomorphicAdd(new AdditiveElgamalCiphertext(blah, curve.getInfinity()), minerKey);
+					for(int i = 1; i < in.length; i++) {
+						out[(i+party) % in.length].flush();
+					}
+					for(int i = in.length-1; i >= 1; i--) {
+						ECPoint blah2 = curve.decodePoint((byte[]) in[(i+party) % in.length].readObject());
+						decrypted = decrypted.homomorphicAdd(new AdditiveElgamalCiphertext(blah2, curve.getInfinity()), minerKey);
+					}
+					if(party == 0) {
+						if(g.equals(decrypted.getCipher(minerKey))) {
+							System.out.println("\tYes");
+							isDummy = true;
+						} else System.out.println("\tNo");
+					}
+				}
+
+				if(party == 0) {
+					System.out.println("What is CombinedCiphers?");
+				} 
+				{
+					AdditiveElgamalCiphertext decrypted = totalCipher;
+					ECPoint blah = decrypted.getEphemeral(minerKey).multiply(minerPrivKey.getPrivKey()[0].negate());
+					for(int i = 1; i < in.length; i++) {
+						out[(i+party) % in.length].writeObject(blah.getEncoded(true));
+					}
+					decrypted = decrypted.homomorphicAdd(new AdditiveElgamalCiphertext(blah, curve.getInfinity()), minerKey);
+					for(int i = 1; i < in.length; i++) {
+						out[(i+party) % in.length].flush();
+					}
+					for(int i = in.length-1; i >= 1; i--) {
+						ECPoint blah2 = curve.decodePoint((byte[]) in[(i+party) % in.length].readObject());
+						decrypted = decrypted.homomorphicAdd(new AdditiveElgamalCiphertext(blah2, curve.getInfinity()), minerKey);
+					}
+					if(party == 0) {
+						if(curve.getInfinity().equals(decrypted.getCipher(minerKey))) {
+							System.out.println("\tZero");
+						} else System.out.println("\tNo " + decrypted.getCipher(minerKey).normalize().equals(g.multiply(BigInteger.valueOf(in.length))));
+					}
+				}
+				if(party == 0) {
+					System.out.println("Do ciphers match?");
+				} 
+				{
+					boolean match = true;
+					for(int k = 0; k < countedVotes.length && match;k++){
+						AdditiveCiphertext[] origCiphertexts = (AdditiveCiphertext[]) voterVotes[k].getCiphertext();
+						AdditiveCiphertext[] finalCiphertexts = (AdditiveCiphertext[]) countedVotes[k].getCiphertext();
+						for(int j = 0; j < origCiphertexts.length; j++) {
+							AdditiveElgamalCiphertext cipher1 = (AdditiveElgamalCiphertext) origCiphertexts[j]; 
+							AdditiveElgamalCiphertext cipher2 = (AdditiveElgamalCiphertext) finalCiphertexts[j]; 
+							ECPoint blah = ((AdditiveElgamalCiphertext) cipher1).getEphemeral(minerKey).multiply(minerPrivKey.getPrivKey()[0].negate());
+							ECPoint blah2 = ((AdditiveElgamalCiphertext) cipher2).getEphemeral(minerKey).multiply(minerPrivKey.getPrivKey()[0].negate());
+							for(int i = 1; i < in.length; i++) {
+								out[(i+party) % in.length].writeObject(blah.getEncoded(true));
+								out[(i+party) % in.length].writeObject(blah2.getEncoded(true));
+							}
+							cipher1 = cipher1.homomorphicAdd(new AdditiveElgamalCiphertext(blah, curve.getInfinity()), minerKey);
+							cipher2 = cipher2.homomorphicAdd(new AdditiveElgamalCiphertext(blah2, curve.getInfinity()), minerKey);
+							for(int i = 1; i < in.length; i++) {
+								out[(i+party) % in.length].flush();
+							}
+							for(int i = in.length-1; i >= 1; i--) {
+								ECPoint blah3 = curve.decodePoint((byte[]) in[(i+party) % in.length].readObject());
+								ECPoint blah4 = curve.decodePoint((byte[]) in[(i+party) % in.length].readObject());
+								cipher1 = cipher1.homomorphicAdd(new AdditiveElgamalCiphertext(blah3, curve.getInfinity()), minerKey);
+								cipher2 = cipher2.homomorphicAdd(new AdditiveElgamalCiphertext(blah4, curve.getInfinity()), minerKey);
+							}
+							if(cipher2.getCipher(minerKey).equals(cipher1.getCipher(minerKey))) {
+							} else {
+								if(party == 0) {
+									if(isDummy) {
+										System.out.println("\tNo, good");
+									} else {
+										System.out.println("\tNo, bad");
+									}
+								}
+								match = false;
+								break;
+							}
+						}
+					}
+					if(match) {
+						if(isDummy) {
+							System.out.println("\tYes, bad");
+						} else {
+							System.out.println("\tYes, good");
+						}
+					}
+				}
+			}
 		} catch (IOException | ClassNotFoundException | MultipleTrueProofException | NoTrueProofException | ArraySizesDoNotMatchException e) {
 			e.printStackTrace();
 		}
 
-		{
-			ByteArrayOutputStream out1 = new ByteArrayOutputStream();
-			try {
-				ObjectOutputStream out2 = new ObjectOutputStream(out1);
-				out2.writeObject(this);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}	
+		//		{
+		//			ByteArrayOutputStream out1 = new ByteArrayOutputStream();
+		//			try {
+		//				ObjectOutputStream out2 = new ObjectOutputStream(out1);
+		//				out2.writeObject(this);
+		//			} catch (IOException e) {
+		//				e.printStackTrace();
+		//			}
+		//		}	
+
 		//		private CryptoData[][] dummyTableRandomizeTranscript;
 		//		private CryptoData[][] dummyTableDecryptTranscript;
 		//		private CryptoData[][] passwordTableRandomizeTranscript;
@@ -2238,7 +2389,7 @@ public class BallotTransaction5_1 implements BallotT {
 		//		private CryptoData[][] passwordTableDecryptTranscript;	
 		//		private ElectionTableRowInner[][] intermediateDummyTables;
 		//		private CryptoData[][] dummyProofTranscripts;
-		
+
 		return true;
 	}
 

@@ -321,7 +321,7 @@ public class Test3 {
 			if((i%4/2) == 0) {
 				ballot = new BallotTransaction5_1(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
 			} else {
-				ballot = new BallotTransaction5_1(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], minerKey.generateEphemeral(rand), rand);
+				ballot = new BallotTransaction5_1(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], minerKey.generateEphemeral(rand), passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
 			}
 			try {
 				outBallots.writeUnshared(ballot);
