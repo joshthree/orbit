@@ -8,13 +8,14 @@ import org.bouncycastle.util.Arrays;
 import blah.AdditiveCiphertext;
 import blah.AdditiveElgamalCiphertext;
 import blah.Additive_Pub_Key;
+import election.AdditiveEncryptedVote;
 import election.EncryptedVote;
 import zero_knowledge_proofs.ZKPProtocol;
 import zero_knowledge_proofs.ZeroKnowledgeAndProver;
 import zero_knowledge_proofs.CryptoData.CryptoData;
 import zero_knowledge_proofs.CryptoData.CryptoDataArray;
 
-public class SVHNwEncryptedVoteMulti implements EncryptedVote {
+public class SVHNwEncryptedVoteMulti implements AdditiveEncryptedVote {
 	
 	/**
 	 * 
@@ -34,7 +35,7 @@ public class SVHNwEncryptedVoteMulti implements EncryptedVote {
 	}
 
 	@Override
-	public EncryptedVote rerandomize(SecureRandom rand, Additive_Pub_Key raceKey) {
+	public AdditiveEncryptedVote rerandomize(SecureRandom rand, Additive_Pub_Key raceKey) {
 		BigInteger[] r = new BigInteger[cipher.length];
 		for(int i = 0; i < r.length; i++) {
 			r[i] = raceKey.generateEphemeral(rand);
@@ -43,7 +44,7 @@ public class SVHNwEncryptedVoteMulti implements EncryptedVote {
 	}
 
 	@Override
-	public EncryptedVote rerandomize(BigInteger[] r, Additive_Pub_Key raceKey) {
+	public AdditiveEncryptedVote rerandomize(BigInteger[] r, Additive_Pub_Key raceKey) {
 		AdditiveCiphertext[] newCiphers = new AdditiveCiphertext[cipher.length];
 		for(int i = 0; i < r.length; i++) {
 		//Rerandomize
@@ -64,7 +65,7 @@ public class SVHNwEncryptedVoteMulti implements EncryptedVote {
 	}
 
 	@Override
-	public Object getCiphertext() {
+	public AdditiveCiphertext[] getCiphertext() {
 		return cipher;
 	}
 
@@ -120,9 +121,27 @@ public class SVHNwEncryptedVoteMulti implements EncryptedVote {
 	}
 
 	@Override
-	public EncryptedVote withoutProof() {
+	public AdditiveEncryptedVote withoutProof() {
 		// TODO Auto-generated method stub
 		return new SVHNwEncryptedVoteMulti(cipher, null);
+	}
+
+	@Override
+	public SVHNwEncryptedVoteMulti scalarMultiply(BigInteger toMultiply, Additive_Pub_Key electionKey) {
+		AdditiveCiphertext[] newCipher = new AdditiveCiphertext[cipher.length];
+		for(int i = 0; i < newCipher.length; i++) {
+			newCipher[i] = cipher[i].scalarMultiply(toMultiply, electionKey);
+		}
+		return new SVHNwEncryptedVoteMulti(newCipher, null);
+	}
+
+	@Override
+	public SVHNwEncryptedVoteMulti homomorphicAdd(AdditiveEncryptedVote otherVote, Additive_Pub_Key electionKey) {
+		AdditiveCiphertext[] newCipher = new AdditiveCiphertext[cipher.length];
+		for(int i = 0; i < newCipher.length; i++) {
+			newCipher[i] = cipher[i].homomorphicAdd(((SVHNwEncryptedVoteMulti)otherVote).getCiphertext()[i], electionKey);
+		}
+		return new SVHNwEncryptedVoteMulti(newCipher, null);
 	}
 
 }

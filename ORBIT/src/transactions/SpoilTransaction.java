@@ -1,33 +1,48 @@
 package transactions;
 
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.security.SecureRandom;
 
 import blah.AdditiveCiphertext;
+import blah.AdditiveElgamalCiphertext;
+import blah.AdditiveElgamalPrivKey;
 import blah.Additive_Pub_Key;
+import zero_knowledge_proofs.CryptoData.CryptoData;
 
 public class SpoilTransaction implements SourceTransaction{
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 6855692716938401733L;
-	private Additive_Pub_Key voterKey;
-	private BallotTransaction sourceTransaction;
+	private Additive_Pub_Key voterKey; 
+	private BallotTransaction sourceTransaction; 
+	private AdditiveElgamalCiphertext dummyFlag;
+	private AdditiveElgamalCiphertext password;
+	private CryptoData[] signature;
 	private long position = -1;
 	
+	public SpoilTransaction(AdditiveElgamalPrivKey voterKey, AdditiveElgamalCiphertext password, AdditiveElgamalCiphertext dummyFlag, BallotTransaction source, SecureRandom rand) {
+		this.dummyFlag = dummyFlag;
+		sourceTransaction = source;
+		this.password = password;
+		this.voterKey = voterKey.getPubKey();
+		//TODO:  Not complete:  Needs to prove ownership of ballot and requires ballot, just for testing.
+	}
+	
 	public BallotTransaction getSourceTransaction() {
-		return null;
+		return sourceTransaction;
 	}
 
 	@Override
 	public AdditiveCiphertext getPasswordCiphertext() {
-		// TODO Auto-generated method stub
-		return null;
+		return password;
 	}
 
 	@Override
 	public Additive_Pub_Key getVoterPubKey() {
 		// TODO Auto-generated method stub
-		return null;
+		return voterKey;
 	}
 
 	@Override
@@ -51,7 +66,7 @@ public class SpoilTransaction implements SourceTransaction{
 	@Override
 	public AdditiveCiphertext getDummyFlag() {
 		// TODO Auto-generated method stub
-		return null;
+		return dummyFlag;
 	}
 
 	@Override

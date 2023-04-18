@@ -28,5 +28,6 @@ public interface EncryptedVote extends Serializable {
 
 
 
+
 }
  

@@ -28,7 +28,7 @@ public class AdditiveElgamalPrivKey implements Additive_Priv_Key {
 	}
 	
 	@Override
-	public Additive_Pub_Key getPubKey() {
+	public AdditiveElgamalPubKey getPubKey() {
 		// TODO Auto-generated method stub
 		return pub;
 	}
@@ -39,20 +39,20 @@ public class AdditiveElgamalPrivKey implements Additive_Priv_Key {
 	}
 
 	@Override
-	public AdditiveCiphertext decrypt(Ciphertext cipher) {
+	public AdditiveElgamalCiphertext decrypt(Ciphertext cipher) {
 		AdditiveElgamalCiphertext cipher2 = (AdditiveElgamalCiphertext) cipher;
 		ECPoint newCipher = ((ECPoint) cipher2.getCipher(pub)).add(cipher2.getEphemeral(pub).multiply(privKey.negate()));
 		return new AdditiveElgamalCiphertext(newCipher, cipher2.getEphemeral(pub));
 	}
 	
-	public AdditiveCiphertext addKey(Ciphertext cipher) {
+	public AdditiveElgamalCiphertext addKey(Ciphertext cipher) {
 		AdditiveElgamalCiphertext cipher2 = (AdditiveElgamalCiphertext) cipher;
 		ECPoint newCipher = ((ECPoint) cipher2.getCipher(pub)).add(cipher2.getEphemeral(pub).multiply(privKey));
 		return new AdditiveElgamalCiphertext(newCipher, cipher2.getEphemeral(pub));
 	}
 
 	@Override
-	public AdditiveCiphertext partialGroupDecrypt(Ciphertext c, Channel[] channels) {
+	public AdditiveElgamalCiphertext partialGroupDecrypt(Ciphertext c, Channel[] channels) {
 		// TODO Auto-generated method stub
 		return null;
 	}

@@ -57,12 +57,12 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 		return y;
 	}
 	@Override
-	public AdditiveCiphertext getEmptyCiphertext() {
+	public AdditiveElgamalCiphertext getEmptyCiphertext() {
 		return encrypt(BigInteger.ZERO, BigInteger.ZERO);
 	}
 
 	@Override
-	public AdditiveCiphertext encrypt(BigInteger m, SecureRandom rand) {
+	public AdditiveElgamalCiphertext encrypt(BigInteger m, SecureRandom rand) {
 		
 		return encrypt(m, generateEphemeral(rand));
 	}
@@ -74,7 +74,7 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 	}
 
 	@Override
-	public AdditiveCiphertext encrypt(BigInteger m, BigInteger r) {
+	public AdditiveElgamalCiphertext encrypt(BigInteger m, BigInteger r) {
 		return new AdditiveElgamalCiphertext(g.multiply(m).add(y.multiply(r)), g.multiply(r));
 	}
 

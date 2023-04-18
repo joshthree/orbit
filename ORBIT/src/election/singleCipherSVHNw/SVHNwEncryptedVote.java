@@ -7,11 +7,13 @@ import org.bouncycastle.util.Arrays;
 
 import blah.AdditiveCiphertext;
 import blah.Additive_Pub_Key;
+import election.AdditiveEncryptedVote;
 import election.EncryptedVote;
+import election.multiCipherSVHNw.SVHNwEncryptedVoteMulti;
 import zero_knowledge_proofs.ZKPProtocol;
 import zero_knowledge_proofs.CryptoData.CryptoData;
 
-public class SVHNwEncryptedVote implements EncryptedVote {
+public class SVHNwEncryptedVote implements AdditiveEncryptedVote {
 	
 	/**
 	 * 
@@ -46,7 +48,7 @@ public class SVHNwEncryptedVote implements EncryptedVote {
 	}
 
 	@Override
-	public Object getCiphertext() {
+	public AdditiveCiphertext getCiphertext() {
 		return cipher;
 	}
 	
@@ -91,6 +93,19 @@ public class SVHNwEncryptedVote implements EncryptedVote {
 	@Override
 	public EncryptedVote withoutProof() {
 		// TODO Auto-generated method stub
+		return new SVHNwEncryptedVote(cipher, null);
+	}
+
+
+	@Override
+	public SVHNwEncryptedVote scalarMultiply(BigInteger toMultiply, Additive_Pub_Key electionKey) {
+		AdditiveCiphertext newCipher = cipher.scalarMultiply(toMultiply, electionKey);
+		return new SVHNwEncryptedVote(cipher, null);
+	}
+
+	@Override
+	public SVHNwEncryptedVote homomorphicAdd(AdditiveEncryptedVote otherVote, Additive_Pub_Key electionKey) {
+		AdditiveCiphertext newCipher = cipher.homomorphicAdd(((SVHNwEncryptedVote)otherVote).getCiphertext(), electionKey);
 		return new SVHNwEncryptedVote(cipher, null);
 	}
 
