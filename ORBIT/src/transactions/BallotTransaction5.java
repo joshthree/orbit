@@ -1063,6 +1063,10 @@ public class BallotTransaction5 implements BallotT {
 						if(in[0] == null) {
 							System.out.print("reshuffle required");
 						}
+						if(!retry) {
+							if(in[0] == null) System.out.print("RESHUFFLE DISABLED!!!");
+							continue;
+						}
 						try {
 							for(int j = 0; j < in.length; j++) {
 								if(out[j] != null) {
@@ -2033,7 +2037,7 @@ public class BallotTransaction5 implements BallotT {
 				for(int j = 1; j < in.length; j++) {
 					combinedCiphers[i] = combinedCiphers[i].homomorphicAdd(ciphertextSet1[j][i], minerKey);
 				}
-				combinedCiphers[i].homomorphicAdd(inverseDummy, minerKey);
+				combinedCiphers[i] = combinedCiphers[i].homomorphicAdd(inverseDummy, minerKey);
 			}
 			//start decrypting with next party first
 			AdditiveElgamalCiphertext current = combinedCiphers[(party+in.length-1) % in.length];
