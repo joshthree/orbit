@@ -145,7 +145,7 @@ public class AdditiveElgamalCiphertext extends AdditiveCiphertext {
 		}
 		return rerandomize(((Additive_Pub_Key) pub).generateEphemeral(rand), pub);
 	}
-
+ 
 	@Override
 	public AdditiveElgamalCiphertext rerandomize(BigInteger ephemeral, Additive_Pub_Key pub) {
 		if(cipher == null) {
