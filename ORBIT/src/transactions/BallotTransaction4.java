@@ -1054,7 +1054,7 @@ public class BallotTransaction4 implements BallotT {
 				//Step 6.2
 				if(i == election.getResetRowCount()) {
 					if(countEqual == i || countUnequal == i) {
-//						retry = true;
+						retry = true;
 						if(in[0] == null) {
 							System.out.print("reshuffle required");
 						}
