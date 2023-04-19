@@ -31,7 +31,7 @@ public class AdditiveElgamalPrivKey implements Additive_Priv_Key {
 	public AdditiveElgamalPubKey getPubKey() {
 		// TODO Auto-generated method stub
 		return pub;
-	}
+	} 
 
 	@Override
 	public BigInteger[] getPrivKey() {

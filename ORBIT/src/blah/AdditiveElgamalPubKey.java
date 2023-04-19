@@ -60,7 +60,7 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 	public AdditiveElgamalCiphertext getEmptyCiphertext() {
 		return encrypt(BigInteger.ZERO, BigInteger.ZERO);
 	}
-
+ 
 	@Override
 	public AdditiveElgamalCiphertext encrypt(BigInteger m, SecureRandom rand) {
 		
