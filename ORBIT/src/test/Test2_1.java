@@ -118,7 +118,7 @@ public class Test2_1 {
 		try {
 			ObjectOutput out2 = new ObjectOutputStream(out1);
 			out2.writeObject(encryptedVotes);
-			System.out.printf("%d, ", out1.toByteArray().length);  //Initial Votes size (pre-transaction, pre-proof)
+			System.out.printf("%d, ", out1.toByteArray().length);  //print1. Initial Votes size (pre-transaction, pre-proof)
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -135,7 +135,7 @@ public class Test2_1 {
 		try {
 			ObjectOutput out2 = new ObjectOutputStream(out1);
 			out2.writeObject(encryptedVotes);
-			System.out.printf("%d, ", out1.toByteArray().length); //Initial Votes size (pre-transaction, with proof)
+			System.out.printf("%d, ", out1.toByteArray().length); //print2. Initial Votes size (pre-transaction, with proof)
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -164,7 +164,7 @@ public class Test2_1 {
 //			}
 //			System.out.println();
 //		}
-		System.out.printf("%d, %d, %d, ", end0-start0, end1-start1, end2-start2);  //time to vote, time to prove votes, time to verify votes. 
+		System.out.printf("%d, %d, %d, ", end0-start0, end1-start1, end2-start2);  //print3. time to vote, print4. time to prove votes, print5. time to verify voterVotes. 
 		ProcessedBlockchain blockchain = new ProcessedBlockchain();
 		long start3 = System.nanoTime();
 		BallotT[] ballots = Test2_1.createTransactions(election, encryptedVotes, blockchain, ringSize, rand);
@@ -175,12 +175,12 @@ public class Test2_1 {
 		try {
 			ObjectOutput out2 = new ObjectOutputStream(out1);
 			out2.writeObject(ballots);
-			System.out.printf("%d, ", out1.toByteArray().length);  //Size of ballots,
+			System.out.printf("%d, ", out1.toByteArray().length);  // print8. Size of ballots,
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
-		System.out.printf("%d \n", end3-start3);  //time to create transactions,
+		System.out.printf("%d \n", end3-start3);  //print9. time to create transactions,
 		
 		
 		
@@ -383,7 +383,7 @@ public class Test2_1 {
 
 
 		long time5 = System.nanoTime();
-		System.out.printf("%d, %d, ", time4 - time3, time5 - time4);  //Time to create ballot, time to verify ballot (including verifying voterVotes again).
+		System.out.printf("%d, %d, ", time4 - time3, time5 - time4);  //print6. Time to create ballot transaction, print7. time to verify ballot transaction (including verifying voterVotes again).
 		return ballots;
 	}
 }
