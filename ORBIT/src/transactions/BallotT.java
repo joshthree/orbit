@@ -17,8 +17,6 @@ import zero_knowledge_proofs.CryptoData.CryptoData;
 
 public interface BallotT extends VoterTransaction {
 
-	AdditiveCiphertext getPasswordCiphertext();
-
 	Additive_Pub_Key getVoterPubKey();
 
 	// Dummy ballot parts 2 and 3 can be done here.

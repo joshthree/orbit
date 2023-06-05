@@ -18,11 +18,11 @@ public class SpoilTransaction implements SourceTransaction{
 	private Additive_Pub_Key voterKey; 
 	private BallotTransaction sourceTransaction; 
 	private AdditiveElgamalCiphertext dummyFlag;
-	private AdditiveElgamalCiphertext password;
+	private AdditiveElgamalCiphertext[] password;
 	private CryptoData[] signature;
 	private long position = -1;
 	
-	public SpoilTransaction(AdditiveElgamalPrivKey voterKey, AdditiveElgamalCiphertext password, AdditiveElgamalCiphertext dummyFlag, BallotTransaction source, SecureRandom rand) {
+	public SpoilTransaction(AdditiveElgamalPrivKey voterKey, AdditiveElgamalCiphertext[] password, AdditiveElgamalCiphertext dummyFlag, BallotTransaction source, SecureRandom rand) {
 		this.dummyFlag = dummyFlag;
 		sourceTransaction = source;
 		this.password = password;
@@ -35,8 +35,8 @@ public class SpoilTransaction implements SourceTransaction{
 	}
 
 	@Override
-	public AdditiveCiphertext getPasswordCiphertext() {
-		return password;
+	public AdditiveCiphertext getPasswordCiphertext(int index) {
+		return password[index];
 	}
 
 	@Override
@@ -73,5 +73,9 @@ public class SpoilTransaction implements SourceTransaction{
 	public byte[] getBytes() {
 		return ByteBuffer.wrap(new byte[8]).putLong(position).array();
 	}
-	
+
+	@Override
+	public int getNumPasswords() {
+		return password.length;
+	}
 }

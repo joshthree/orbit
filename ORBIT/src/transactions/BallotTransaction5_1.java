@@ -178,7 +178,7 @@ public class BallotTransaction5_1 implements BallotT {
 
 		BigInteger origDummyR1 = minerKey.generateEphemeral(rand);
 
-		AdditiveCiphertext origPassword1 = ringMembers[source].getPasswordCiphertext();
+		AdditiveCiphertext origPassword1 = ringMembers[source].getPasswordCiphertext(0);
 
 
 		origDummy2 = origDummy1.rerandomize(origDummyR1, minerKey);
@@ -359,7 +359,7 @@ public class BallotTransaction5_1 implements BallotT {
 					secretsForKeyImageProof = new BigInteger[8];
 					innerFirstSec[1] = new BigIntData(oldKeyR);
 					dummyInputs = origDummy2.getRerandomizationProverData(sourceOrigDummy, origDummyR1, rand, minerKey);
-					passwordInputs = origPassword2.getRerandomizationProverData(ringMembers[i].getPasswordCiphertext(), origPasswordR1, rand, origPassPubRing);
+					passwordInputs = origPassword2.getRerandomizationProverData(ringMembers[i].getPasswordCiphertext(0), origPasswordR1, rand, origPassPubRing);
 					simulatedChallenges[i] = new BigIntData(null);
 					secretsForKeyImageProof[4] = sourceVoterPrivKey;
 					secretsForKeyImageProof[5] = password;
@@ -368,7 +368,7 @@ public class BallotTransaction5_1 implements BallotT {
 				} else {
 					secretsForKeyImageProof = new BigInteger[4];
 					dummyInputs = origDummy2.getRerandomizationProverData(sourceOrigDummy, null, rand, minerKey);					
-					passwordInputs = origPassword2.getRerandomizationProverData(ringMembers[i].getPasswordCiphertext(), null, rand, origPassPubRing);
+					passwordInputs = origPassword2.getRerandomizationProverData(ringMembers[i].getPasswordCiphertext(0), null, rand, origPassPubRing);
 					simulatedChallenges[i] = new BigIntData(minerKey.generateEphemeral(rand));
 				}
 
@@ -583,7 +583,7 @@ public class BallotTransaction5_1 implements BallotT {
 				envForKeyImageProof[2] = envForKeyImageProof[4] = new ECPointData(h1);
 
 				dummyInputs = origDummy2.getRerandomizationVerifierData(sourceOrigDummy, minerKey);
-				passwordInputs = origPassword2.getRerandomizationVerifierData(ringMembers[i].getPasswordCiphertext(), origPassPubRing);
+				passwordInputs = origPassword2.getRerandomizationVerifierData(ringMembers[i].getPasswordCiphertext(0), origPassPubRing);
 
 				proofOfMatchingDataInner[0] = new CryptoDataArray(innerFirstPub);
 				proofOfMatchingDataInner[1] = new CryptoDataArray(innerFirstEnv);
@@ -728,7 +728,7 @@ public class BallotTransaction5_1 implements BallotT {
 	}
 
 	@Override
-	public AdditiveCiphertext getPasswordCiphertext() {
+	public AdditiveCiphertext getPasswordCiphertext(int index) {
 		// 
 		return password;
 	}
@@ -1060,7 +1060,7 @@ public class BallotTransaction5_1 implements BallotT {
 				//Step 6.2
 				if(i == election.getResetRowCount()) {
 					if(countEqual == i || countUnequal == i) {
-//						retry = true;
+						retry = true;
 						if(in[0] == null) {
 							System.out.print("reshuffle required");
 						}
@@ -1520,7 +1520,7 @@ public class BallotTransaction5_1 implements BallotT {
 			return false;
 		}
 		// PASSWORD TIME  *************************************************************************************************************************************************************************
-
+		//First, categorize ciphertexts:  What kind of group are they?  1 is unsharable, 0 is sharable, equal groups will be equal.
 		ElectionTableRowInner[] passwordTable = new ElectionTableRowInner[2];
 		passwordTable[0] = new ElectionTableRowInner(minerKey.getEmptyCiphertext().homomorphicAdd(dummyTableOutput.negate(minerKey), minerKey),null, dummyFlagOutput);
 		passwordTable[1] = new ElectionTableRowInner(tableOmega.homomorphicAdd(dummyTableOutput.negate(minerKey), minerKey), null, minerKey.encrypt(BigInteger.ONE, BigInteger.ZERO));
@@ -3171,4 +3171,11 @@ public class BallotTransaction5_1 implements BallotT {
 
 		return toReturn;
 	}
+
+	@Override
+	public int getNumPasswords() {
+		// TODO Auto-generated method stub
+		return 1;
+	}
+
 }

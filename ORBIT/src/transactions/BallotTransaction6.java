@@ -1,5 +1,6 @@
 package transactions;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -10,6 +11,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.Security;
+import java.util.ArrayList;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.math.ec.ECCurve;
@@ -22,6 +24,7 @@ import blah.AdditiveElgamalPrivKey;
 import blah.AdditiveElgamalPubKey;
 import blah.Additive_Priv_Key;
 import blah.Additive_Pub_Key;
+import election.AdditiveEncryptedVote;
 import election.Election;
 import election.EncryptedVote;
 import election.Race;
@@ -33,6 +36,7 @@ import zero_knowledge_proofs.ECDummyBallot10dProver;
 import zero_knowledge_proofs.ECEqualDiscreteLogsForAnyNumberProver;
 import zero_knowledge_proofs.ECEqualDiscreteLogsProver;
 import zero_knowledge_proofs.ECSchnorrCombinations;
+import zero_knowledge_proofs.ECSchnorrProver;
 import zero_knowledge_proofs.MultipleTrueProofException;
 import zero_knowledge_proofs.NoTrueProofException;
 import zero_knowledge_proofs.ZKPProtocol;
@@ -44,7 +48,7 @@ import zero_knowledge_proofs.CryptoData.CryptoDataArray;
 import zero_knowledge_proofs.CryptoData.ECCurveData;
 import zero_knowledge_proofs.CryptoData.ECPointData;
 
-public class BallotTransaction4_1 implements BallotT {
+public class BallotTransaction6 implements BallotT {
 
 	/**
 	 * 
@@ -56,14 +60,13 @@ public class BallotTransaction4_1 implements BallotT {
 	private EncryptedVote[] voterVotes;
 	private Additive_Pub_Key voterKey;
 	private AdditiveCiphertext blindedPasswordOrigDecrypted;
-	private AdditiveCiphertext blindedPasswordGuessDecrypted;
-	private AdditiveCiphertext encryptedOldKey;
+	private AdditiveCiphertext blindedPasswordDiffDecrypted;
+	//	private AdditiveCiphertext encryptedOldKey;
 	private AdditiveCiphertext origDummy2;
-	private AdditiveCiphertext origPassword2;
 	private AdditiveCiphertext passwordGuessCipher;
-	private AdditiveCiphertext origPassword2Blinded;
+	private AdditiveCiphertext origPassword2Preblinded;
 	private AdditiveCiphertext passwordGuessCipherBlinded;
-	private AdditiveCiphertext password;
+	private AdditiveCiphertext[] password;
 	private transient ECPoint keyImage;
 	private byte[] keyImageBytes;
 
@@ -71,10 +74,10 @@ public class BallotTransaction4_1 implements BallotT {
 	private long electionID;
 
 	//Not Hashed
-	
+
 	//government work
 	private EncryptedVote[] countedVotes;
-	private AdditiveCiphertext dummyFlag;
+	private AdditiveElgamalCiphertext dummyFlag;
 	private AdditiveCiphertext tableOmega;
 	private ElectionTableRowInner[][] intermediateDummyTables;
 	private CryptoData[][] dummyProofTranscripts;
@@ -94,8 +97,13 @@ public class BallotTransaction4_1 implements BallotT {
 	private CryptoData[][] passwordTableDecryptTranscript;
 	private AdditiveElgamalCiphertext[] passwordInputsDecrypted;
 
-	public BallotTransaction4_1(SourceTransaction[] ringMembers, int source, Additive_Priv_Key signingKey, Additive_Priv_Key newKey, BigInteger passwordGuess, BigInteger passwordDisplacement, ElectionTransaction electionTx, EncryptedVote[] votes, BigInteger passwordRandomization, SecureRandom rand){
+	private AdditiveElgamalCiphertext[][] ciphertextSet1;
+	private CryptoData[][] ciphertextSet1Transcripts;
+	private CryptoData[] longProofTranscript;
+
+	public BallotTransaction6(SourceTransaction[] ringMembers, int source, Additive_Priv_Key signingKey, Additive_Priv_Key newKey, BigInteger passwordGuess, BigInteger passwordDisplacement, ElectionTransaction electionTx, EncryptedVote[] votes, BigInteger passwordRandomization, SecureRandom rand){
 		super();
+		password = new AdditiveElgamalCiphertext[ringMembers[source].getNumPasswords()];
 		Election election = electionTx.getElection();
 		electionPos = electionTx.getPosition();
 		electionID = electionTx.getPosition();
@@ -105,7 +113,6 @@ public class BallotTransaction4_1 implements BallotT {
 		for(int i = 0; i < ringMembers.length; i++) {
 			ringMembersPos[i] = ringMembers[i].getPosition();
 		}
-
 		//		//Testing encrypted vote rerandomization.
 		//		BigInteger[] r = election.getRace(0).generateRerandimizationValues(rand);
 		//		EncryptedVote rerandomized = votes[0].rerandomize(r, election.getRace(0).getPubKey());
@@ -151,7 +158,7 @@ public class BallotTransaction4_1 implements BallotT {
 		//			else System.out.println("fadsfadsf  success 2");
 		//		} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException
 		//				| ArraySizesDoNotMatchException e1) {
-		//			// TODO Auto-generated catch block
+		//			// 
 		//			e1.printStackTrace();
 		//		}
 
@@ -162,87 +169,96 @@ public class BallotTransaction4_1 implements BallotT {
 		voterKey = newKey.getPubKey();
 		//Step 2:
 		BigInteger sourceVoterPrivKey = signingKey.getPrivKey()[0];
-		BigInteger oldKeyR = voterKey.generateEphemeral(rand);
+		//		BigInteger oldKeyR = voterKey.generateEphemeral(rand);
 		AdditiveElgamalPubKey minerKey = election.getMinerKey();
 		Additive_Pub_Key fullPasswordKey = minerKey.combineKeys(voterKey);
-		encryptedOldKey = fullPasswordKey.encrypt(sourceVoterPrivKey, oldKeyR);
-		BigInteger passwordR = fullPasswordKey.generateEphemeral(rand);
-		passwordGuessCipher = fullPasswordKey.encrypt(passwordGuess, passwordR);
+		//		encryptedOldKey = fullPasswordKey.encrypt(sourceVoterPrivKey, oldKeyR);
+
 
 		//Step 3:
 		AdditiveCiphertext origDummy1 = ringMembers[source].getDummyFlag();
 
 		BigInteger origDummyR1 = minerKey.generateEphemeral(rand);
 
-		AdditiveCiphertext origPassword1 = ringMembers[source].getPasswordCiphertext(0);
-
-
 		origDummy2 = origDummy1.rerandomize(origDummyR1, minerKey);
 		Additive_Pub_Key origPassPub = minerKey.combineKeys(ringMembers[source].getVoterPubKey());
-		BigInteger origPasswordR1 = origPassPub.generateEphemeral(rand);
-		origPassword2 = origPassword1.rerandomize(origPasswordR1, origPassPub);
+		BigInteger[] origPasswordR1 = new BigInteger[password.length];
+		//Step 4:
 
-		//Step 4: in arguments
+		for(int i = 0; i < password.length-1; i++) {
+			origPasswordR1[i] = origPassPub.generateEphemeral(rand);
+			password[i] = ((AdditiveElgamalPrivKey) (newKey)).addKey(signingKey.decrypt(ringMembers[source].getPasswordCiphertext(i+1).rerandomize(origPasswordR1[i], origPassPub)));
+		}
+		origPasswordR1[password.length-1] = origPassPub.generateEphemeral(rand);
 
-		//Step 5:
+		origPassword2Preblinded = ((AdditiveElgamalPrivKey) (newKey)).addKey(signingKey.decrypt(ringMembers[source].getPasswordCiphertext(0).rerandomize(origPasswordR1[password.length-1], origPassPub)));
+
+
+		//Step 5: in arguments
 
 		//Step 6:
+		BigInteger passwordR = fullPasswordKey.generateEphemeral(rand);
+		passwordGuessCipher = fullPasswordKey.encrypt(passwordGuess, passwordR);
+
+		//Step 7:
 		MessageDigest fastHashDigest = null;
 		Security.addProvider(new BouncyCastleProvider());
 		try {
 			fastHashDigest = MessageDigest.getInstance("Keccak-256");
 		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
+			// 
 			e.printStackTrace();
 		}
 		ECCurve curve = minerKey.getCurve();
 		ECPoint g = minerKey.getG();
-		ECPoint h1 = curve.decodePoint(fullPasswordKey.getPublicKey());
 		byte[] keyImageBaseHash = fastHashDigest.digest(ringMembers[source].getVoterPubKey().getPublicKey());
+
 		ECPoint keyImageBase = g.multiply(new BigInteger(keyImageBaseHash).mod(minerKey.getOrder()));
-		keyImage = keyImageBase.multiply(sourceVoterPrivKey.add(passwordGuess).mod(minerKey.getOrder()));
+		keyImage = keyImageBase.multiply(sourceVoterPrivKey.add(passwordGuess).mod(minerKey.getOrder())); //ys TODO multiply passwordGuess
 		keyImageBytes = keyImage.getEncoded(true);
 		//TODO Should be direct Hash to Point, but this will do for now
 
-		//Step 7:
+		//Step 8:
 		BigInteger passwordRandomizationGamma = fullPasswordKey.generateEphemeral(rand);
-		origPassword2Blinded = origPassword2.scalarMultiply(passwordRandomizationGamma, origPassPub);
+		password[password.length-1] = origPassword2Preblinded.scalarMultiply(passwordRandomizationGamma, origPassPub);
 		passwordGuessCipherBlinded = passwordGuessCipher.scalarMultiply(passwordRandomizationGamma, fullPasswordKey);
 
-		//Step 8:
-		blindedPasswordOrigDecrypted = signingKey.decrypt(origPassword2Blinded);
+		//Step 9:
+
+		blindedPasswordDiffDecrypted = newKey.decrypt(password[password.length-1].homomorphicAdd(passwordGuessCipherBlinded.negate(fullPasswordKey), origPassPub));
 
 		BigInteger passwordDisplacementR = minerKey.generateEphemeral(rand);
-		AdditiveCiphertext passwordDisplacementCipher = fullPasswordKey.encrypt(passwordDisplacement, passwordDisplacementR);
-		AdditiveCiphertext blindedPasswordWithFullKey = ((AdditiveElgamalPrivKey) newKey).addKey(blindedPasswordOrigDecrypted);
+		//		AdditiveCiphertext passwordDisplacementCipher = fullPasswordKey.encrypt(passwordDisplacement, passwordDisplacementR);
+		//		AdditiveCiphertext blindedPasswordWithFullKey = ((AdditiveElgamalPrivKey) newKey).addKey(blindedPasswordOrigDecrypted);
 
-		this.password = passwordDisplacementCipher.homomorphicAdd(blindedPasswordWithFullKey, fullPasswordKey);
+		//		this.password[0] = passwordDisplacementCipher.homomorphicAdd(blindedPasswordWithFullKey, fullPasswordKey);
 
-		//Step 9:
-		blindedPasswordGuessDecrypted = newKey.decrypt(passwordGuessCipherBlinded);
+		//Step 10:
 
-		//Step 10:  Proofs
+		//Step 11:  Proofs
 		ZKPProtocol fullProof = getVoterProof(ringMembers, minerKey);
 
 		//Generate CryptoData for Proofs.
+		//		CryptoData[] fullProofData = getVoterProverData(source, newKey, passwordGuess, passwordDisplacement,
+		//				rand, sourceVoterPrivKey, oldKeyR, minerKey, fullPasswordKey, origDummyR1, origPasswordR1, curve, g,
+		//				passwordRandomizationGamma, passwordDisplacementR, passwordR);
 		CryptoData[] fullProofData = getVoterProverData(source, newKey, passwordGuess, passwordDisplacement,
-				rand, sourceVoterPrivKey, oldKeyR, minerKey, fullPasswordKey, origDummyR1, origPasswordR1, curve, g, h1,
+				rand, sourceVoterPrivKey, minerKey, fullPasswordKey, origDummyR1, origPasswordR1, curve, g,
 				passwordRandomizationGamma, passwordDisplacementR, passwordR);
 
 
 
 		voterProofs = null;
 		try {
-			System.out.flush();
 			voterProofs = fullProof.proveFiatShamir(fullProofData[0], fullProofData[1], fullProofData[2]);
-			//			ByteArrayOutputStream out1 = new ByteArrayOutputStream();
-			//			ObjectOutputStream out = new ObjectOutputStream(out1);
-			//			out.writeObject(this);
-			//			ByteArrayInputStream in1 = new ByteArrayInputStream(out1.toByteArray());
-			//			ObjectInputStream in = new ObjectInputStream(in1);
-			//			BallotTransaction same = (BallotTransaction) in.readObject();
-			//			CryptoData[] verifierData = same.getVoterVerifierData(election);
-			//			CryptoData[] verifierData = this.getVoterVerifierData(election);
+//			ByteArrayOutputStream out1 = new ByteArrayOutputStream();
+//			ObjectOutputStream out = new ObjectOutputStream(out1);
+//			out.writeObject(this);
+//			ByteArrayInputStream in1 = new ByteArrayInputStream(out1.toByteArray());
+//			ObjectInputStream in = new ObjectInputStream(in1);
+//			BallotTransaction6 same = (BallotTransaction6) in.readObject();
+//			CryptoData[] verifierData = same.getVoterVerifierData(election);
+//						CryptoData[] verifierData = this.getVoterVerifierData(election);
 
 			//			System.out.println(fullProofData[0]);
 			//			System.out.println(verifierData[0]);
@@ -260,8 +276,8 @@ public class BallotTransaction4_1 implements BallotT {
 			//				System.out.println("not equal 2");
 			//			}
 
-			//			boolean verify = fullProof.verifyFiatShamir(verifierData[0], voterProofs[0], voterProofs[1], verifierData[1]); 
-			//			boolean verify = fullProof.verifyFiatShamir(fullProofData[0], same.voterProofs[0], same.voterProofs[1], fullProofData[2]);
+//			boolean verify = fullProof.verifyFiatShamir(verifierData[0], voterProofs[0], voterProofs[1], verifierData[1]); 
+			//						boolean verify = fullProof.verifyFiatShamir(fullProofData[0], this.voterProofs[0], this.voterProofs[1], fullProofData[2]);
 			//			System.out.println(verify);
 		} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException
 				| ArraySizesDoNotMatchException e) {
@@ -269,138 +285,208 @@ public class BallotTransaction4_1 implements BallotT {
 		}
 
 	}
+	private void populateRingMembers(ProcessedBlockchain blockchain) {
+		if(ringMembers == null) {
+			ringMembers = new SourceTransaction[ringMembersPos.length];
+			for(int i = 0; i < ringMembers.length; i++) {
+				ringMembers[i] = (SourceTransaction) blockchain.getTransaction(ringMembersPos[i]);
+			}
+		}
 
+	}
 	private CryptoData[] getVoterProverData(int source, Additive_Priv_Key newKey,
-			BigInteger password, BigInteger passwordDisplacement, SecureRandom rand, BigInteger sourceVoterPrivKey,
-			BigInteger oldKeyR, AdditiveElgamalPubKey minerKey, Additive_Pub_Key fullPasswordKey,
-			BigInteger origDummyR1, BigInteger origPasswordR1, ECCurve curve, ECPoint g, ECPoint h1,
+			BigInteger password, BigInteger passwordDisplacement, SecureRandom rand, BigInteger sourceVoterPrivKey, 
+			AdditiveElgamalPubKey minerKey, Additive_Pub_Key fullPasswordKey,
+			BigInteger origDummyR1, BigInteger[] origPasswordR1, ECCurve curve, ECPoint g,
 			BigInteger passwordRandomizationGamma, BigInteger passwordDisplacementR, BigInteger passwordR) {
 		CryptoData[] fullProofData = new CryptoData[3];//0 for public, 1 for secret, 2 for environment
 		CryptoData[][] fullProofDataUnpacked = new CryptoData[3][];//0 for public, 1 for secret, 2 for environment
-		fullProofDataUnpacked[0] = new CryptoData[5];
-		fullProofDataUnpacked[1] = new CryptoData[5];
-		fullProofDataUnpacked[2] = new CryptoData[6];
+		fullProofDataUnpacked[0] = new CryptoData[3];
+		fullProofDataUnpacked[1] = new CryptoData[3];
+		fullProofDataUnpacked[2] = new CryptoData[4];
 		CryptoData[][] proofOfMatchingData = new CryptoData[3][];
 		proofOfMatchingData[0] = new CryptoData[ringMembers.length];
 		proofOfMatchingData[1] = new CryptoData[ringMembers.length+1];
 		proofOfMatchingData[2] = new CryptoData[ringMembers.length];
 		CryptoData[] simulatedChallenges = new CryptoData[ringMembers.length];
+		ECPoint voterKeyPoint = curve.decodePoint(voterKey.getPublicKey());
+		ECPoint minerKeyPoint = curve.decodePoint(minerKey.getPublicKey());
 		for(int i = 0; i < ringMembers.length; i++) {
-			CryptoData[] innerFirstPub = new CryptoData[2];
-			CryptoData[] innerFirstSec;
+			//			//First bullet point:
+			//			{
+			//				CryptoData[] innerFirstPub = new CryptoData[2];
+			//				ECPoint signingPub = curve.decodePoint(ringMembers[i].getVoterPubKey().getPublicKey());
+			//				ECPoint keyCipher = ((AdditiveElgamalCiphertext) encryptedOldKey).getCipher(fullPasswordKey);
+			//				ECPoint keyEphemeral = ((AdditiveElgamalCiphertext) encryptedOldKey).getEphemeral(fullPasswordKey);
+			//				keyCipher = keyCipher.subtract(signingPub);
+			//				
+			//				innerFirstPub[0] = new ECPointData(keyCipher);
+			//				innerFirstPub[1] = new ECPointData(keyEphemeral);
+			//				CryptoData[] innerFirstSec;
+			//	
+			//				if(i == source) {
+			//					innerFirstSec = new CryptoData[2];
+			//					innerFirstSec[1] = new BigIntData(oldKeyR);
+			//				} else {
+			//					innerFirstSec = new CryptoData[1];
+			//				}
+			//				innerFirstSec[0] = new BigIntData(minerKey.generateEphemeral(rand));
+			//				
+			//				CryptoData[] innerFirstEnv = new CryptoData[2];
+			//				
+			//				innerFirstEnv[0] = new ECCurveData(curve, voterKeyPoint);
+			//				innerFirstEnv[1] = new ECPointData(g);
+			//				
+			//				proofOfMatchingData[0][0] = new CryptoDataArray(innerFirstPub);
+			//				proofOfMatchingData[1][0] = new CryptoDataArray(innerFirstSec);
+			//				proofOfMatchingData[2][0] = new CryptoDataArray(innerFirstEnv);
+			//				
+			//			}
+			//Second bullet point:
+			CryptoData[][] innerInnerData = new CryptoData[3][3];
+			{
+				AdditiveElgamalCiphertext sourceOrigDummy = (AdditiveElgamalCiphertext) ringMembers[i].getDummyFlag();
+				AdditiveElgamalCiphertext origDummy2 = (AdditiveElgamalCiphertext) this.origDummy2;
 
-			CryptoData[] innerFirstEnv = new CryptoData[2];
-			innerFirstEnv[0] = new ECCurveData(curve, h1);
-			innerFirstEnv[1] = new ECPointData(g);
-			if(i == source) {
-				innerFirstSec = new CryptoData[2];
-			} else {
-				innerFirstSec = new CryptoData[1];
+				AdditiveElgamalCiphertext diff = origDummy2.homomorphicAdd(sourceOrigDummy.negate(minerKey), minerKey);
+				ECPoint diffCipher = diff.getCipher(minerKey);
+				ECPoint diffEphemeral = diff.getEphemeral(minerKey);
+
+				CryptoData[] innerSecondPub = new CryptoData[2];
+
+				innerSecondPub[0] = new ECPointData(diffCipher);
+				innerSecondPub[1] = new ECPointData(diffEphemeral);
+
+				CryptoData[] innerSecondSec;
+
+				if(i == source) {
+					innerSecondSec = new CryptoData[2];
+					innerSecondSec[1] = new BigIntData(origDummyR1);
+					simulatedChallenges[i] = new BigIntData(null);
+				} else {
+					innerSecondSec = new CryptoData[1];
+					simulatedChallenges[i] = new BigIntData(minerKey.generateEphemeral(rand));
+				}
+				innerSecondSec[0] = new BigIntData(minerKey.generateEphemeral(rand));
+
+				CryptoData[] innerSecondEnv = new CryptoData[2];
+				innerSecondEnv[0] = new ECCurveData(curve, minerKeyPoint);
+				innerSecondEnv[1] = new ECPointData(g);
+
+				innerInnerData[0][0] = new CryptoDataArray(innerSecondPub);
+				innerInnerData[1][0] = new CryptoDataArray(innerSecondSec);
+				innerInnerData[2][0] = new CryptoDataArray(innerSecondEnv);
 			}
+			//Third bullet point:
+			{
+				//First, prove for all but password to be used that it is a rerandomization and rekeying of one over
+				//Then, show the last one is an exponentiation of a rerandomization and rekeying.
 
-			ECPoint signingPub = curve.decodePoint(ringMembers[i].getVoterPubKey().getPublicKey());
-			{	
-				Additive_Pub_Key origPassPubRing = minerKey.combineKeys(ringMembers[i].getVoterPubKey());
-				CryptoData[] proofOfMatchingDataInner = new CryptoData[3];
-				AdditiveElgamalCiphertext newCipher = (AdditiveElgamalCiphertext) encryptedOldKey.homomorphicAdd(new AdditiveElgamalCiphertext(signingPub, curve.getInfinity()).negate(origPassPubRing),origPassPubRing);
-				innerFirstPub[0] = new ECPointData((ECPoint) newCipher.getCipher(origPassPubRing));
-				innerFirstPub[1] = new ECPointData(newCipher.getEphemeral(origPassPubRing));
-				CryptoData[] dummyInputs;
-				CryptoData[] passwordInputs;
+				CryptoData[] midThirdPub = new CryptoData[this.password.length*2+1];
+				midThirdPub[0] = new ECPointData(((AdditiveElgamalPubKey) voterKey).getY().subtract(((AdditiveElgamalPubKey) ringMembers[i].getVoterPubKey()).getY()));
 
-				AdditiveCiphertext sourceOrigDummy = ringMembers[i].getDummyFlag();
-				ECPoint[] publicForKeyImageProof = new ECPoint[5];
+				for(int j = 1; j < this.password.length; j++) {
+					midThirdPub[2*j-1] = new ECPointData(((ECPoint) this.password[j-1].getCipher(minerKey)).subtract((ECPoint) ringMembers[i].getPasswordCiphertext(j).getCipher(minerKey)));
+					midThirdPub[2*j] = new ECPointData((((AdditiveElgamalCiphertext)this.password[j-1]).getEphemeral(minerKey)).subtract(((AdditiveElgamalCiphertext) ringMembers[i].getPasswordCiphertext(j)).getEphemeral(minerKey)));
+				}
+				midThirdPub[midThirdPub.length - 2] = new ECPointData(((ECPoint) origPassword2Preblinded.getCipher(minerKey)).subtract((ECPoint) ringMembers[i].getPasswordCiphertext(0).getCipher(minerKey)));
+				midThirdPub[midThirdPub.length - 1] = new ECPointData((((AdditiveElgamalCiphertext)origPassword2Preblinded).getEphemeral(minerKey)).subtract(((AdditiveElgamalCiphertext) ringMembers[i].getPasswordCiphertext(0)).getEphemeral(minerKey)));
+
+				CryptoData[] midThirdSec;
+				if(i == source) {
+					midThirdSec = new CryptoData[(this.password.length+1)*2];
+					midThirdSec[(this.password.length+1)] = new BigIntData(newKey.getPrivKey()[0].subtract(sourceVoterPrivKey));
+					for(int j = 1; j < this.password.length+1; j++) {
+						midThirdSec[(this.password.length+1)+j] = new BigIntData(origPasswordR1[j-1]);
+					}
+				} else {
+					midThirdSec = new CryptoData[this.password.length+1];
+				}
+				for(int j = 0; j < this.password.length+1; j++) {
+					midThirdSec[j] = new BigIntData(minerKey.generateEphemeral(rand));
+				}
+
+				CryptoData[] midThirdEnv = new CryptoData[this.password.length+2];
+				midThirdEnv[0] = new ECCurveData(curve, g);
+				midThirdEnv[1] = new ECPointData(minerKey.getY().add(((AdditiveElgamalPubKey) voterKey).getY()));
+				for(int j = 0; j < this.password.length; j++) {
+					midThirdEnv[2+j] = new ECPointData(((AdditiveElgamalCiphertext) ringMembers[i].getPasswordCiphertext((j+1)% this.password.length)).getEphemeral(fullPasswordKey));
+				}
+
+				innerInnerData[0][1] = new CryptoDataArray(midThirdPub);
+				innerInnerData[1][1] = new CryptoDataArray(midThirdSec);
+				innerInnerData[2][1] = new CryptoDataArray(midThirdEnv);
+			}
+			//Fourth Bullet point, key image HAS TO BE IN OR:  
+			{
+				ECPoint[] publicForKeyImageProof = new ECPoint[3];
 				publicForKeyImageProof[0] = getKeyImage();
-				publicForKeyImageProof[1] = (ECPoint) encryptedOldKey.getCipher(fullPasswordKey);
-				publicForKeyImageProof[2] = ((AdditiveElgamalCiphertext) encryptedOldKey).getEphemeral(minerKey);
-				publicForKeyImageProof[3] = (ECPoint) passwordGuessCipher.getCipher(minerKey);
-				publicForKeyImageProof[4] = ((AdditiveElgamalCiphertext) passwordGuessCipher).getEphemeral(minerKey);
-
-				BigInteger[] secretsForKeyImageProof;
+				publicForKeyImageProof[1] = ((ECPoint) passwordGuessCipher.getCipher(minerKey)).add(((AdditiveElgamalPubKey) ringMembers[i].getVoterPubKey()).getY());
+				publicForKeyImageProof[2] = ((AdditiveElgamalCiphertext) passwordGuessCipher).getEphemeral(minerKey);
 
 
-				CryptoData[] envForKeyImageProof = new CryptoData[5];
+
 
 				MessageDigest fastHashDigest = null;
 				Security.addProvider(new BouncyCastleProvider());
 				try {
 					fastHashDigest = MessageDigest.getInstance("Keccak-256");
 				} catch (NoSuchAlgorithmException e) {
-					// TODO Auto-generated catch block
+					// 
 					e.printStackTrace();
 				}
 
+				BigInteger[] secretsForKeyImageProof;
+				if(i == source) {
+					secretsForKeyImageProof = new BigInteger[4];
+					secretsForKeyImageProof[2] = sourceVoterPrivKey.add(password).mod(curve.getOrder());
+					secretsForKeyImageProof[3] = passwordR;
+				} else {
+					secretsForKeyImageProof = new BigInteger[2];
+				}
+
+				for(int j = 0; j < 2; j++) {
+					secretsForKeyImageProof[j] = minerKey.generateEphemeral(rand);
+				}
 				byte[] keyImageBaseHash = fastHashDigest.digest(ringMembers[i].getVoterPubKey().getPublicKey());
 				//				System.out.printf("For ring member %d in tx:%s,  \n\t%s\n", i, ((AdditiveElgamalPubKey) voterKey).getY(), new BigInteger(keyImageBaseHash).mod(minerKey.getOrder()));
 
 				ECPoint keyImageBase = g.multiply(new BigInteger(keyImageBaseHash).mod(minerKey.getOrder()));
 
+				ECPoint h1 = ((AdditiveElgamalPubKey) fullPasswordKey).getY();
+
+
+
+				CryptoData[] envForKeyImageProof = new CryptoData[3];
 				envForKeyImageProof[0] = new ECCurveData(curve, keyImageBase);
 				envForKeyImageProof[1] = new ECPointData(g);
 				envForKeyImageProof[2] = new ECPointData(h1);
-				envForKeyImageProof[3] = new ECPointData(g);
-				envForKeyImageProof[4] = new ECPointData(h1);
-
-				innerFirstSec[0] = new BigIntData(minerKey.generateEphemeral(rand));
-				if(i == source) {
-					secretsForKeyImageProof = new BigInteger[8];
-					innerFirstSec[1] = new BigIntData(oldKeyR);
-					dummyInputs = origDummy2.getRerandomizationProverData(sourceOrigDummy, origDummyR1, rand, minerKey);
-					passwordInputs = origPassword2.getRerandomizationProverData(ringMembers[i].getPasswordCiphertext(0), origPasswordR1, rand, origPassPubRing);
-					simulatedChallenges[i] = new BigIntData(null);
-					secretsForKeyImageProof[4] = sourceVoterPrivKey;
-					secretsForKeyImageProof[5] = password;
-					secretsForKeyImageProof[6] = oldKeyR;
-					secretsForKeyImageProof[7] = passwordR;
-				} else {
-					secretsForKeyImageProof = new BigInteger[4];
-					dummyInputs = origDummy2.getRerandomizationProverData(sourceOrigDummy, null, rand, minerKey);					
-					passwordInputs = origPassword2.getRerandomizationProverData(ringMembers[i].getPasswordCiphertext(0), null, rand, origPassPubRing);
-					simulatedChallenges[i] = new BigIntData(minerKey.generateEphemeral(rand));
-				}
-
-				for(int j = 0; j < 4; j++) {
-					secretsForKeyImageProof[j] = minerKey.generateEphemeral(rand);
-				}
-
-				proofOfMatchingDataInner[0] = new CryptoDataArray(innerFirstPub);
-				proofOfMatchingDataInner[1] = new CryptoDataArray(innerFirstSec);
-				proofOfMatchingDataInner[2] = new CryptoDataArray(innerFirstEnv);
-				proofOfMatchingData[0][i] = new CryptoDataArray(new CryptoData[] {
-						proofOfMatchingDataInner[0],
-						dummyInputs[0],
-						passwordInputs[0],
-						new CryptoDataArray(publicForKeyImageProof)
-
-				});
-
-				proofOfMatchingData[1][i] = new CryptoDataArray(new CryptoData[] {
-						proofOfMatchingDataInner[1],
-						dummyInputs[1],
-						passwordInputs[1],
-						new CryptoDataArray(secretsForKeyImageProof)
-				});
-
-				proofOfMatchingData[2][i] = new CryptoDataArray(new CryptoData[] {
-						proofOfMatchingDataInner[2],
-						dummyInputs[2],
-						passwordInputs[2],
-						new CryptoDataArray(envForKeyImageProof)
-				});
+				innerInnerData[0][2] = new CryptoDataArray(publicForKeyImageProof);
+				innerInnerData[1][2] = new CryptoDataArray(secretsForKeyImageProof);
+				innerInnerData[2][2] = new CryptoDataArray(envForKeyImageProof);
 			}
+
+			proofOfMatchingData[0][i] = new CryptoDataArray(innerInnerData[0]);
+			proofOfMatchingData[1][i] = new CryptoDataArray(innerInnerData[1]);
+			proofOfMatchingData[2][i] = new CryptoDataArray(innerInnerData[2]); 
 		}
 		proofOfMatchingData[1][proofOfMatchingData[1].length-1] = new CryptoDataArray(simulatedChallenges);
 		fullProofDataUnpacked[0][0] = new CryptoDataArray(proofOfMatchingData[0]);
 		fullProofDataUnpacked[1][0] = new CryptoDataArray(proofOfMatchingData[1]);
 		fullProofDataUnpacked[2][0] = new CryptoDataArray(proofOfMatchingData[2]);
 
+		//Prove that the reerandomized rekeyed password stored in origPassword2Blinded currently.  
+		//First, prove that the last position on the password list is gamma times the origPassword2Blinded.  Also, guess ciphertext.
+
+
+
+
 
 
 
 		ECPoint[] publicForPasswordBlinding = new ECPoint[4];
-
-		publicForPasswordBlinding[0] = (ECPoint) origPassword2Blinded.getCipher(minerKey);
-		publicForPasswordBlinding[1] = ((AdditiveElgamalCiphertext) origPassword2Blinded).getEphemeral(minerKey);
+		publicForPasswordBlinding[0] = (ECPoint) this.password[this.password.length-1].getCipher(minerKey);
+		publicForPasswordBlinding[1] = ((AdditiveElgamalCiphertext) this.password[this.password.length-1]).getEphemeral(minerKey);
 		publicForPasswordBlinding[2] = (ECPoint) passwordGuessCipherBlinded.getCipher(minerKey);
 		publicForPasswordBlinding[3] = ((AdditiveElgamalCiphertext) passwordGuessCipherBlinded).getEphemeral(minerKey);
 
@@ -411,8 +497,8 @@ public class BallotTransaction4_1 implements BallotT {
 
 		CryptoData[] envForPasswordBlinding = new CryptoData[4];
 
-		envForPasswordBlinding[0] = new ECCurveData(curve, (ECPoint) origPassword2.getCipher(minerKey));
-		envForPasswordBlinding[1] = new ECPointData(((AdditiveElgamalCiphertext) origPassword2).getEphemeral(minerKey));
+		envForPasswordBlinding[0] = new ECCurveData(curve, (ECPoint) origPassword2Preblinded.getCipher(minerKey));
+		envForPasswordBlinding[1] = new ECPointData(((AdditiveElgamalCiphertext) origPassword2Preblinded).getEphemeral(minerKey));
 		envForPasswordBlinding[2] = new ECPointData((ECPoint) passwordGuessCipher.getCipher(minerKey));
 		envForPasswordBlinding[3] = new ECPointData(((AdditiveElgamalCiphertext) passwordGuessCipher).getEphemeral(minerKey));
 
@@ -420,258 +506,323 @@ public class BallotTransaction4_1 implements BallotT {
 		fullProofDataUnpacked[1][1] = new CryptoDataArray(secretsForPasswordBlinding);
 		fullProofDataUnpacked[2][1] = new CryptoDataArray(envForPasswordBlinding);
 
-		ECPoint[] publicForOrigDecrypt = new ECPoint[3];
+		//Now, prove decryption of both of them
+		ECPoint[] publicForOrigDecrypt = new ECPoint[1];
 
-		AdditiveElgamalCiphertext diff1 = (AdditiveElgamalCiphertext) origPassword2Blinded.homomorphicAdd(blindedPasswordOrigDecrypted.negate(minerKey), minerKey);
-		publicForOrigDecrypt[0] = (ECPoint) diff1.getCipher(minerKey);
-		publicForOrigDecrypt[1] = (ECPoint) encryptedOldKey.getCipher(minerKey);
-		publicForOrigDecrypt[2] = ((AdditiveElgamalCiphertext) encryptedOldKey).getEphemeral(minerKey);
+		publicForOrigDecrypt[0] = ((ECPoint) this.password[this.password.length-1].getCipher(fullPasswordKey)).subtract((ECPoint) passwordGuessCipherBlinded.getCipher(fullPasswordKey)).subtract((ECPoint) blindedPasswordDiffDecrypted.getCipher(minerKey));
 
-		BigInteger[] secretsForOrigDecrypt = new BigInteger[4];
+		BigInteger[] secretsForOrigDecrypt = new BigInteger[2];
 
-		for(int i = 0; i < 2; i++) {
+		for(int i = 0; i < 1; i++) {
 			secretsForOrigDecrypt[i] = minerKey.generateEphemeral(rand);
 		}
-		secretsForOrigDecrypt[2] = sourceVoterPrivKey;
-		secretsForOrigDecrypt[3] = oldKeyR;
+		secretsForOrigDecrypt[1] = newKey.getPrivKey()[0];
 
-		CryptoData[] envForOrigDecrypt = new CryptoData[3];
+		CryptoData[] envForOrigDecrypt = new CryptoData[1];
 
-		envForOrigDecrypt[0] = new ECCurveData(curve, ((AdditiveElgamalCiphertext) origPassword2Blinded).getEphemeral(minerKey));
-		envForOrigDecrypt[1] = new ECPointData(g);
-		envForOrigDecrypt[2] = new ECPointData(((AdditiveElgamalPubKey) fullPasswordKey).getY());
+		envForOrigDecrypt[0] = new ECCurveData(curve,((AdditiveElgamalCiphertext) blindedPasswordDiffDecrypted).getEphemeral(minerKey));
 
 		fullProofDataUnpacked[0][2] = new CryptoDataArray(publicForOrigDecrypt);
 		fullProofDataUnpacked[1][2] = new CryptoDataArray(secretsForOrigDecrypt);
 		fullProofDataUnpacked[2][2] = new CryptoDataArray(envForOrigDecrypt);
 		//DONE WITH D, NOW DOING E
-
-		ECPoint[] publicForGuessDecrypt = new ECPoint[2];
-
-		AdditiveElgamalCiphertext diff2 = (AdditiveElgamalCiphertext) passwordGuessCipherBlinded.homomorphicAdd(blindedPasswordGuessDecrypted.negate(minerKey), minerKey);
-
-		publicForGuessDecrypt[0] = (ECPoint) diff2.getCipher(minerKey);
-		publicForGuessDecrypt[1] = ((AdditiveElgamalCiphertext) passwordGuessCipherBlinded).getEphemeral(minerKey);
-
-		BigInteger[] secretsForGuessDecrypt = new BigInteger[2];
-
-		secretsForGuessDecrypt[0] = minerKey.generateEphemeral(rand);
-		secretsForGuessDecrypt[1] = passwordRandomizationGamma.multiply(passwordR).mod(curve.getOrder());
-
-		CryptoData[] envForGuessDecrypt = new CryptoData[2];
-		envForGuessDecrypt[0] = new ECCurveData(curve, curve.decodePoint(voterKey.getPublicKey()));
-		envForGuessDecrypt[1] = new ECPointData(g);
-
-		//		ByteArrayOutputStream out1 = new ByteArrayOutputStream();
-		//		MessageDigest digest = null;
-		//		try {
-		//			digest = MessageDigest.getInstance("SHA-256");
-		//		} catch (NoSuchAlgorithmException e) {
-		//			e.printStackTrace();
-		//		}
+		//
+		//		ECPoint[] publicForGuessDecrypt = new ECPoint[2];
+		//
+		//
+		//		publicForGuessDecrypt[0] = (ECPoint) diff2.getCipher(minerKey);
+		//		publicForGuessDecrypt[1] = ((AdditiveElgamalCiphertext) passwordGuessCipherBlinded).getEphemeral(minerKey);
+		//
+		//		BigInteger[] secretsForGuessDecrypt = new BigInteger[2];
+		//
+		//		secretsForGuessDecrypt[0] = minerKey.generateEphemeral(rand);
+		//		secretsForGuessDecrypt[1] = passwordRandomizationGamma.multiply(passwordR).mod(curve.getOrder());
+		//
+		//		CryptoData[] envForGuessDecrypt = new CryptoData[2];
+		//		envForGuessDecrypt[0] = new ECCurveData(curve, curve.decodePoint(voterKey.getPublicKey()));
+		//		envForGuessDecrypt[1] = new ECPointData(g);
+		//
+		//		//		ByteArrayOutputStream out1 = new ByteArrayOutputStream();
+		//		//		MessageDigest digest = null;
+		//		//		try {
+		//		//			digest = MessageDigest.getInstance("SHA-256");
+		//		//		} catch (NoSuchAlgorithmException e) {
+		//		//			e.printStackTrace();
+		//		//		}
 		BigInteger transactionHash = new BigInteger(getVoterProofBytes());
-		fullProofDataUnpacked[0][3] = new CryptoDataArray(publicForGuessDecrypt);
-		fullProofDataUnpacked[1][3] = new CryptoDataArray(secretsForGuessDecrypt);
-		fullProofDataUnpacked[2][3] = new CryptoDataArray(envForGuessDecrypt);
-		//		
-		//  g = 0, h = 1, origEphemeral = 2
-		//  k = 0, x = 1, r_2 = 2
-		//		int[][][] structure = new int[][][] {{{2, 1},{0, 0},{1, 2}},{{0, 2}},{{0, 1}}};
-		CryptoData[] pubForNewPassword = new CryptoData[3];
-		AdditiveCiphertext oddCipher = this.password.homomorphicAdd(blindedPasswordOrigDecrypted.negate(minerKey), minerKey);
-		pubForNewPassword[0] = new ECPointData((ECPoint) oddCipher.getCipher(minerKey));
-		pubForNewPassword[1] = new ECPointData(((AdditiveElgamalCiphertext) oddCipher).getEphemeral(minerKey));
-		pubForNewPassword[2] = new ECPointData(curve.decodePoint(voterKey.getPublicKey()));
+		//		fullProofDataUnpacked[0][3] = new CryptoDataArray(publicForGuessDecrypt);
+		//		fullProofDataUnpacked[1][3] = new CryptoDataArray(secretsForGuessDecrypt);
+		//		fullProofDataUnpacked[2][3] = new CryptoDataArray(envForGuessDecrypt);
+		//		//		
+		//		//  g = 0, h = 1, origEphemeral = 2
+		//		//  k = 0, x = 1, r_2 = 2
+		//		//		int[][][] structure = new int[][][] {{{2, 1},{0, 0},{1, 2}},{{0, 2}},{{0, 1}}};
+		//		CryptoData[] pubForNewPassword = new CryptoData[3];
+		//		AdditiveCiphertext oddCipher = this.password[this.password.length - 1].homomorphicAdd(blindedPasswordOrigDecrypted.negate(minerKey), minerKey);
+		//		pubForNewPassword[0] = new ECPointData((ECPoint) oddCipher.getCipher(minerKey));
+		//		pubForNewPassword[1] = new ECPointData(((AdditiveElgamalCiphertext) oddCipher).getEphemeral(minerKey));
+		//		pubForNewPassword[2] = new ECPointData(curve.decodePoint(voterKey.getPublicKey()));
+		//
+		//		CryptoData[] secForNewPassword = new CryptoData[6];
+		//		for(int i = 0; i < secForNewPassword.length/2; i++) {
+		//			secForNewPassword[i] = new BigIntData(fullPasswordKey.generateEphemeral(rand));
+		//		}
+		//		secForNewPassword[0+secForNewPassword.length/2] = new BigIntData(passwordDisplacement);
+		//		secForNewPassword[1+secForNewPassword.length/2] = new BigIntData(newKey.getPrivKey()[0]);
+		//		secForNewPassword[2+secForNewPassword.length/2] = new BigIntData(passwordDisplacementR);
+		//
+		//		CryptoData[] envForNewPassword = new CryptoData[3];
+		//
+		//		envForNewPassword[0] = new ECCurveData(curve, g);
+		//		envForNewPassword[1] = new ECPointData(voterKeyPoint);
+		//		envForNewPassword[2] = new ECPointData(((AdditiveElgamalCiphertext) blindedPasswordOrigDecrypted).getEphemeral(minerKey));
+		//
+		//		fullProofDataUnpacked[0][4] = new CryptoDataArray(pubForNewPassword);
+		//		fullProofDataUnpacked[1][4] = new CryptoDataArray(secForNewPassword);
+		//		fullProofDataUnpacked[2][4] = new CryptoDataArray(envForNewPassword);
 
-		CryptoData[] secForNewPassword = new CryptoData[6];
-		for(int i = 0; i < secForNewPassword.length/2; i++) {
-			secForNewPassword[i] = new BigIntData(fullPasswordKey.generateEphemeral(rand));
-		}
-		secForNewPassword[0+secForNewPassword.length/2] = new BigIntData(passwordDisplacement);
-		secForNewPassword[1+secForNewPassword.length/2] = new BigIntData(newKey.getPrivKey()[0]);
-		secForNewPassword[2+secForNewPassword.length/2] = new BigIntData(passwordDisplacementR);
-
-		CryptoData[] envForNewPassword = new CryptoData[3];
-
-		envForNewPassword[0] = new ECCurveData(curve, g);
-		envForNewPassword[1] = new ECPointData(h1);
-		envForNewPassword[2] = new ECPointData(((AdditiveElgamalCiphertext) blindedPasswordOrigDecrypted).getEphemeral(minerKey));
-
-		fullProofDataUnpacked[0][4] = new CryptoDataArray(pubForNewPassword);
-		fullProofDataUnpacked[1][4] = new CryptoDataArray(secForNewPassword);
-		fullProofDataUnpacked[2][4] = new CryptoDataArray(envForNewPassword);
-
-		fullProofDataUnpacked[2][5] = new BigIntData(transactionHash);
+		fullProofDataUnpacked[2][3] = new BigIntData(transactionHash);
 
 		for(int i = 0; i < 3; i++) {
 			fullProofData[i] = new CryptoDataArray(fullProofDataUnpacked[i]);
 		}
 		return fullProofData;
 	}
-	
-	private CryptoData[] getVoterVerifierData(Election election) {
-		AdditiveElgamalPubKey minerKey = election.getMinerKey();
-		Additive_Pub_Key fullPasswordKey = minerKey.combineKeys(voterKey);
 
-		ECCurve curve = minerKey.getCurve();
-		ECPoint g = minerKey.getG();
-		ECPoint h1 = ((AdditiveElgamalPubKey) fullPasswordKey).getY();
-		CryptoData[] fullProofData = new CryptoData[2];//0 for public, 1 for environment
+	private CryptoData[] getVoterVerifierData(Election election) {
+		CryptoData[] fullProofData = new CryptoData[3];//0 for public, 1 for environment
 		CryptoData[][] fullProofDataUnpacked = new CryptoData[2][];//0 for public, 1 for environment
-		fullProofDataUnpacked[0] = new CryptoData[5];
-		fullProofDataUnpacked[1] = new CryptoData[6];
+		fullProofDataUnpacked[0] = new CryptoData[3];
+		fullProofDataUnpacked[1] = new CryptoData[4];
 		CryptoData[][] proofOfMatchingData = new CryptoData[2][];
 		proofOfMatchingData[0] = new CryptoData[ringMembers.length];
 		proofOfMatchingData[1] = new CryptoData[ringMembers.length];
+		AdditiveElgamalPubKey minerKey = election.getMinerKey();
+		AdditiveElgamalPubKey fullPasswordKey = (AdditiveElgamalPubKey) minerKey.combineKeys(voterKey);
+		ECCurve curve = minerKey.getCurve();
+		ECPoint g = minerKey.getG();
+		ECPoint voterKeyPoint = curve.decodePoint(voterKey.getPublicKey());
+		ECPoint minerKeyPoint = curve.decodePoint(minerKey.getPublicKey());
 		for(int i = 0; i < ringMembers.length; i++) {
-			CryptoData[] innerFirstPub = new CryptoData[2];
-
-			CryptoData[] innerFirstEnv = new CryptoData[2];
-			innerFirstEnv[0] = new ECCurveData(curve, h1);
-			innerFirstEnv[1] = new ECPointData(g);
-
-			ECPoint signingPub = curve.decodePoint(ringMembers[i].getVoterPubKey().getPublicKey());
+			//			//First bullet point:
+			//			{
+			//				CryptoData[] innerFirstPub = new CryptoData[2];
+			//				ECPoint signingPub = curve.decodePoint(ringMembers[i].getVoterPubKey().getPublicKey());
+			//				ECPoint keyCipher = ((AdditiveElgamalCiphertext) encryptedOldKey).getCipher(fullPasswordKey);
+			//				ECPoint keyEphemeral = ((AdditiveElgamalCiphertext) encryptedOldKey).getEphemeral(fullPasswordKey);
+			//				keyCipher = keyCipher.subtract(signingPub);
+			//				
+			//				innerFirstPub[0] = new ECPointData(keyCipher);
+			//				innerFirstPub[1] = new ECPointData(keyEphemeral);
+			//				CryptoData[] innerFirstSec;
+			//	
+			//				if(i == source) {
+			//					innerFirstSec = new CryptoData[2];
+			//					innerFirstSec[1] = new BigIntData(oldKeyR);
+			//				} else {
+			//					innerFirstSec = new CryptoData[1];
+			//				}
+			//				innerFirstSec[0] = new BigIntData(minerKey.generateEphemeral(rand));
+			//				
+			//				CryptoData[] innerFirstEnv = new CryptoData[2];
+			//				
+			//				innerFirstEnv[0] = new ECCurveData(curve, voterKeyPoint);
+			//				innerFirstEnv[1] = new ECPointData(g);
+			//				
+			//				proofOfMatchingData[0][0] = new CryptoDataArray(innerFirstPub);
+			//				proofOfMatchingData[1][0] = new CryptoDataArray(innerFirstSec);
+			//				proofOfMatchingData[2][0] = new CryptoDataArray(innerFirstEnv);
+			//				
+			//			}
+			//Second bullet point:
+			CryptoData[][] innerInnerData = new CryptoData[2][3];
 			{
-				Additive_Pub_Key origPassPubRing = minerKey.combineKeys(ringMembers[i].getVoterPubKey());
-				CryptoData[] proofOfMatchingDataInner = new CryptoData[3];
-				AdditiveElgamalCiphertext newCipher = (AdditiveElgamalCiphertext) encryptedOldKey.homomorphicAdd(new AdditiveElgamalCiphertext(signingPub, curve.getInfinity()).negate(origPassPubRing),origPassPubRing);
-				innerFirstPub[0] = new ECPointData((ECPoint) newCipher.getCipher(origPassPubRing));
-				innerFirstPub[1] = new ECPointData(newCipher.getEphemeral(origPassPubRing));
-				CryptoData[] dummyInputs;
-				CryptoData[] passwordInputs;
+				AdditiveElgamalCiphertext sourceOrigDummy = (AdditiveElgamalCiphertext) ringMembers[i].getDummyFlag();
+				AdditiveElgamalCiphertext origDummy2 = (AdditiveElgamalCiphertext) this.origDummy2;
 
-				AdditiveCiphertext sourceOrigDummy = ringMembers[i].getDummyFlag();
-				ECPoint[] publicForKeyImageProof = new ECPoint[5];
+				AdditiveElgamalCiphertext diff = origDummy2.homomorphicAdd(sourceOrigDummy.negate(minerKey), minerKey);
+				ECPoint diffCipher = diff.getCipher(minerKey);
+				ECPoint diffEphemeral = diff.getEphemeral(minerKey);
+
+				CryptoData[] innerSecondPub = new CryptoData[2];
+
+				innerSecondPub[0] = new ECPointData(diffCipher);
+				innerSecondPub[1] = new ECPointData(diffEphemeral);
+
+
+
+				CryptoData[] innerSecondEnv = new CryptoData[2];
+				innerSecondEnv[0] = new ECCurveData(curve, minerKeyPoint);
+				innerSecondEnv[1] = new ECPointData(g);
+
+				innerInnerData[0][0] = new CryptoDataArray(innerSecondPub);
+				innerInnerData[1][0] = new CryptoDataArray(innerSecondEnv);
+			}
+			//Third bullet point:
+			{
+				//First, prove for all but password to be used that it is a rerandomization and rekeying of one over
+				//Then, show the last one is an exponentiation of a rerandomization and rekeying.
+
+				CryptoData[] midThirdPub = new CryptoData[this.password.length*2+1];
+				midThirdPub[0] = new ECPointData(((AdditiveElgamalPubKey) voterKey).getY().subtract(((AdditiveElgamalPubKey) ringMembers[i].getVoterPubKey()).getY()));
+
+				for(int j = 1; j < this.password.length; j++) {
+					midThirdPub[2*j-1] = new ECPointData(((ECPoint) this.password[j-1].getCipher(minerKey)).subtract((ECPoint) ringMembers[i].getPasswordCiphertext(j).getCipher(minerKey)));
+					midThirdPub[2*j] = new ECPointData((((AdditiveElgamalCiphertext)this.password[j-1]).getEphemeral(minerKey)).subtract(((AdditiveElgamalCiphertext) ringMembers[i].getPasswordCiphertext(j)).getEphemeral(minerKey)));
+				}
+				midThirdPub[midThirdPub.length - 2] = new ECPointData(((ECPoint) origPassword2Preblinded.getCipher(minerKey)).subtract((ECPoint) ringMembers[i].getPasswordCiphertext(0).getCipher(minerKey)));
+				midThirdPub[midThirdPub.length - 1] = new ECPointData((((AdditiveElgamalCiphertext)origPassword2Preblinded).getEphemeral(minerKey)).subtract(((AdditiveElgamalCiphertext) ringMembers[i].getPasswordCiphertext(0)).getEphemeral(minerKey)));
+
+
+
+				CryptoData[] midThirdEnv = new CryptoData[this.password.length+2];
+				midThirdEnv[0] = new ECCurveData(curve, g);
+				midThirdEnv[1] = new ECPointData(minerKey.getY().add(((AdditiveElgamalPubKey) voterKey).getY()));
+				for(int j = 0; j < this.password.length; j++) {
+					midThirdEnv[2+j] = new ECPointData(((AdditiveElgamalCiphertext) ringMembers[i].getPasswordCiphertext((j+1)% this.password.length)).getEphemeral(fullPasswordKey));
+				}
+
+				innerInnerData[0][1] = new CryptoDataArray(midThirdPub);
+				innerInnerData[1][1] = new CryptoDataArray(midThirdEnv);
+			}
+			//Fourth Bullet point, key image HAS TO BE IN OR:  
+			{
+				ECPoint[] publicForKeyImageProof = new ECPoint[3];
 				publicForKeyImageProof[0] = getKeyImage();
-				publicForKeyImageProof[1] = (ECPoint) encryptedOldKey.getCipher(fullPasswordKey);
-				publicForKeyImageProof[2] = ((AdditiveElgamalCiphertext) encryptedOldKey).getEphemeral(minerKey);
-				publicForKeyImageProof[3] = (ECPoint) passwordGuessCipher.getCipher(minerKey);
-				publicForKeyImageProof[4] = ((AdditiveElgamalCiphertext) passwordGuessCipher).getEphemeral(minerKey);
+				publicForKeyImageProof[1] = ((ECPoint) passwordGuessCipher.getCipher(minerKey)).add(((AdditiveElgamalPubKey) ringMembers[i].getVoterPubKey()).getY());
+				publicForKeyImageProof[2] = ((AdditiveElgamalCiphertext) passwordGuessCipher).getEphemeral(minerKey);
 
-				CryptoData[] envForKeyImageProof = new CryptoData[5];
+
+
 
 				MessageDigest fastHashDigest = null;
 				Security.addProvider(new BouncyCastleProvider());
 				try {
 					fastHashDigest = MessageDigest.getInstance("Keccak-256");
 				} catch (NoSuchAlgorithmException e) {
-					// TODO Auto-generated catch block
+					// 
 					e.printStackTrace();
 				}
+
 
 				byte[] keyImageBaseHash = fastHashDigest.digest(ringMembers[i].getVoterPubKey().getPublicKey());
 				//				System.out.printf("For ring member %d in tx:%s,  \n\t%s\n", i, ((AdditiveElgamalPubKey) voterKey).getY(), new BigInteger(keyImageBaseHash).mod(minerKey.getOrder()));
 
 				ECPoint keyImageBase = g.multiply(new BigInteger(keyImageBaseHash).mod(minerKey.getOrder()));
 
+				ECPoint h1 = ((AdditiveElgamalPubKey) fullPasswordKey).getY();
+
+
+
+				CryptoData[] envForKeyImageProof = new CryptoData[3];
 				envForKeyImageProof[0] = new ECCurveData(curve, keyImageBase);
-				envForKeyImageProof[1] = envForKeyImageProof[3] = new ECPointData(g);
-				envForKeyImageProof[2] = envForKeyImageProof[4] = new ECPointData(h1);
-
-				dummyInputs = origDummy2.getRerandomizationVerifierData(sourceOrigDummy, minerKey);
-				passwordInputs = origPassword2.getRerandomizationVerifierData(ringMembers[i].getPasswordCiphertext(0), origPassPubRing);
-
-				proofOfMatchingDataInner[0] = new CryptoDataArray(innerFirstPub);
-				proofOfMatchingDataInner[1] = new CryptoDataArray(innerFirstEnv);
-				proofOfMatchingData[0][i] = new CryptoDataArray(new CryptoData[] {
-						proofOfMatchingDataInner[0],
-						dummyInputs[0],
-						passwordInputs[0],
-						new CryptoDataArray(publicForKeyImageProof)
-
-				});
-
-				proofOfMatchingData[1][i] = new CryptoDataArray(new CryptoData[] {
-						proofOfMatchingDataInner[1],
-						dummyInputs[1],
-						passwordInputs[1],
-						new CryptoDataArray(envForKeyImageProof)
-				});
-
+				envForKeyImageProof[1] = new ECPointData(g);
+				envForKeyImageProof[2] = new ECPointData(h1);
+				innerInnerData[0][2] = new CryptoDataArray(publicForKeyImageProof);
+				innerInnerData[1][2] = new CryptoDataArray(envForKeyImageProof);
 			}
+
+			proofOfMatchingData[0][i] = new CryptoDataArray(innerInnerData[0]);
+			proofOfMatchingData[1][i] = new CryptoDataArray(innerInnerData[1]); 
 		}
 		fullProofDataUnpacked[0][0] = new CryptoDataArray(proofOfMatchingData[0]);
 		fullProofDataUnpacked[1][0] = new CryptoDataArray(proofOfMatchingData[1]);
 
-		ECPoint[] publicForPasswordBlinding = new ECPoint[4];
+		//Prove that the reerandomized rekeyed password stored in origPassword2Blinded currently.  
+		//First, prove that the last position on the password list is gamma times the origPassword2Blinded.  Also, guess ciphertext.
 
-		publicForPasswordBlinding[0] = (ECPoint) origPassword2Blinded.getCipher(minerKey);
-		publicForPasswordBlinding[1] = ((AdditiveElgamalCiphertext) origPassword2Blinded).getEphemeral(minerKey);
+
+
+
+
+
+
+		ECPoint[] publicForPasswordBlinding = new ECPoint[4];
+		publicForPasswordBlinding[0] = (ECPoint) this.password[this.password.length-1].getCipher(minerKey);
+		publicForPasswordBlinding[1] = ((AdditiveElgamalCiphertext) this.password[this.password.length-1]).getEphemeral(minerKey);
 		publicForPasswordBlinding[2] = (ECPoint) passwordGuessCipherBlinded.getCipher(minerKey);
 		publicForPasswordBlinding[3] = ((AdditiveElgamalCiphertext) passwordGuessCipherBlinded).getEphemeral(minerKey);
 
 
 		CryptoData[] envForPasswordBlinding = new CryptoData[4];
 
-		envForPasswordBlinding[0] = new ECCurveData(curve, (ECPoint) origPassword2.getCipher(minerKey));
-		envForPasswordBlinding[1] = new ECPointData(((AdditiveElgamalCiphertext) origPassword2).getEphemeral(minerKey));
+		envForPasswordBlinding[0] = new ECCurveData(curve, (ECPoint) origPassword2Preblinded.getCipher(minerKey));
+		envForPasswordBlinding[1] = new ECPointData(((AdditiveElgamalCiphertext) origPassword2Preblinded).getEphemeral(minerKey));
 		envForPasswordBlinding[2] = new ECPointData((ECPoint) passwordGuessCipher.getCipher(minerKey));
 		envForPasswordBlinding[3] = new ECPointData(((AdditiveElgamalCiphertext) passwordGuessCipher).getEphemeral(minerKey));
 
 		fullProofDataUnpacked[0][1] = new CryptoDataArray(publicForPasswordBlinding);
 		fullProofDataUnpacked[1][1] = new CryptoDataArray(envForPasswordBlinding);
 
-		ECPoint[] publicForOrigDecrypt = new ECPoint[3];
+		//Now, prove decryption of both of them
+		ECPoint[] publicForOrigDecrypt = new ECPoint[1];
 
-		AdditiveElgamalCiphertext diff1 = (AdditiveElgamalCiphertext) origPassword2Blinded.homomorphicAdd(blindedPasswordOrigDecrypted.negate(minerKey), minerKey);
-		publicForOrigDecrypt[0] = (ECPoint) diff1.getCipher(minerKey);
-		publicForOrigDecrypt[1] = (ECPoint) encryptedOldKey.getCipher(minerKey);
-		publicForOrigDecrypt[2] = ((AdditiveElgamalCiphertext) encryptedOldKey).getEphemeral(minerKey);
+		publicForOrigDecrypt[0] = ((ECPoint) this.password[this.password.length-1].getCipher(fullPasswordKey)).subtract((ECPoint) passwordGuessCipherBlinded.getCipher(fullPasswordKey)).subtract((ECPoint) blindedPasswordDiffDecrypted.getCipher(minerKey));
 
 
-		CryptoData[] envForOrigDecrypt = new CryptoData[3];
+		CryptoData[] envForOrigDecrypt = new CryptoData[1];
 
-		envForOrigDecrypt[0] = new ECCurveData(curve, ((AdditiveElgamalCiphertext) origPassword2Blinded).getEphemeral(minerKey));
-		envForOrigDecrypt[1] = new ECPointData(g);
-		envForOrigDecrypt[2] = new ECPointData(((AdditiveElgamalPubKey) fullPasswordKey).getY());
+		envForOrigDecrypt[0] = new ECCurveData(curve,((AdditiveElgamalCiphertext) blindedPasswordDiffDecrypted).getEphemeral(minerKey));
 
 		fullProofDataUnpacked[0][2] = new CryptoDataArray(publicForOrigDecrypt);
 		fullProofDataUnpacked[1][2] = new CryptoDataArray(envForOrigDecrypt);
-
 		//DONE WITH D, NOW DOING E
-
-		ECPoint[] publicForGuessDecrypt = new ECPoint[2];
-
-		AdditiveElgamalCiphertext diff2 = (AdditiveElgamalCiphertext) passwordGuessCipherBlinded.homomorphicAdd(blindedPasswordGuessDecrypted.negate(minerKey), minerKey);
-
-		publicForGuessDecrypt[0] = (ECPoint) diff2.getCipher(minerKey);
-		publicForGuessDecrypt[1] = ((AdditiveElgamalCiphertext) passwordGuessCipherBlinded).getEphemeral(minerKey);
-
-		CryptoData[] envForGuessDecrypt = new CryptoData[2];
-		envForGuessDecrypt[0] = new ECCurveData(curve, curve.decodePoint(voterKey.getPublicKey()));
-		envForGuessDecrypt[1] = new ECPointData(g);
-
-		//		ByteArrayOutputStream out1 = new ByteArrayOutputStream();
-		//		MessageDigest digest = null;
-		//		try {
-		//			digest = MessageDigest.getInstance("SHA-256");
-		//		} catch (NoSuchAlgorithmException e) {
-		//			e.printStackTrace();
-		//		}
+		//
+		//		ECPoint[] publicForGuessDecrypt = new ECPoint[2];
+		//
+		//
+		//		publicForGuessDecrypt[0] = (ECPoint) diff2.getCipher(minerKey);
+		//		publicForGuessDecrypt[1] = ((AdditiveElgamalCiphertext) passwordGuessCipherBlinded).getEphemeral(minerKey);
+		//
+		//		BigInteger[] secretsForGuessDecrypt = new BigInteger[2];
+		//
+		//		secretsForGuessDecrypt[0] = minerKey.generateEphemeral(rand);
+		//		secretsForGuessDecrypt[1] = passwordRandomizationGamma.multiply(passwordR).mod(curve.getOrder());
+		//
+		//		CryptoData[] envForGuessDecrypt = new CryptoData[2];
+		//		envForGuessDecrypt[0] = new ECCurveData(curve, curve.decodePoint(voterKey.getPublicKey()));
+		//		envForGuessDecrypt[1] = new ECPointData(g);
+		//
+		//		//		ByteArrayOutputStream out1 = new ByteArrayOutputStream();
+		//		//		MessageDigest digest = null;
+		//		//		try {
+		//		//			digest = MessageDigest.getInstance("SHA-256");
+		//		//		} catch (NoSuchAlgorithmException e) {
+		//		//			e.printStackTrace();
+		//		//		}
 		BigInteger transactionHash = new BigInteger(getVoterProofBytes());
-		fullProofDataUnpacked[0][3] = new CryptoDataArray(publicForGuessDecrypt);
-		fullProofDataUnpacked[1][3] = new CryptoDataArray(envForGuessDecrypt);
-		//		
-		//  g = 0, h = 1, origEphemeral = 2
-		//  k = 0, x = 1, r_2 = 2
-		//		int[][][] structure = new int[][][] {{{2, 1},{0, 0},{1, 2}},{{0, 2}},{{0, 1}}};
-		CryptoData[] pubForNewPassword = new CryptoData[3];
-		AdditiveCiphertext oddCipher = this.password.homomorphicAdd(blindedPasswordOrigDecrypted.negate(minerKey), minerKey);
-		pubForNewPassword[0] = new ECPointData((ECPoint) oddCipher.getCipher(minerKey));
-		pubForNewPassword[1] = new ECPointData(((AdditiveElgamalCiphertext) oddCipher).getEphemeral(minerKey));
-		pubForNewPassword[2] = new ECPointData(curve.decodePoint(voterKey.getPublicKey()));
+		//		fullProofDataUnpacked[0][3] = new CryptoDataArray(publicForGuessDecrypt);
+		//		fullProofDataUnpacked[1][3] = new CryptoDataArray(secretsForGuessDecrypt);
+		//		fullProofDataUnpacked[2][3] = new CryptoDataArray(envForGuessDecrypt);
+		//		//		
+		//		//  g = 0, h = 1, origEphemeral = 2
+		//		//  k = 0, x = 1, r_2 = 2
+		//		//		int[][][] structure = new int[][][] {{{2, 1},{0, 0},{1, 2}},{{0, 2}},{{0, 1}}};
+		//		CryptoData[] pubForNewPassword = new CryptoData[3];
+		//		AdditiveCiphertext oddCipher = this.password[this.password.length - 1].homomorphicAdd(blindedPasswordOrigDecrypted.negate(minerKey), minerKey);
+		//		pubForNewPassword[0] = new ECPointData((ECPoint) oddCipher.getCipher(minerKey));
+		//		pubForNewPassword[1] = new ECPointData(((AdditiveElgamalCiphertext) oddCipher).getEphemeral(minerKey));
+		//		pubForNewPassword[2] = new ECPointData(curve.decodePoint(voterKey.getPublicKey()));
+		//
+		//		CryptoData[] secForNewPassword = new CryptoData[6];
+		//		for(int i = 0; i < secForNewPassword.length/2; i++) {
+		//			secForNewPassword[i] = new BigIntData(fullPasswordKey.generateEphemeral(rand));
+		//		}
+		//		secForNewPassword[0+secForNewPassword.length/2] = new BigIntData(passwordDisplacement);
+		//		secForNewPassword[1+secForNewPassword.length/2] = new BigIntData(newKey.getPrivKey()[0]);
+		//		secForNewPassword[2+secForNewPassword.length/2] = new BigIntData(passwordDisplacementR);
+		//
+		//		CryptoData[] envForNewPassword = new CryptoData[3];
+		//
+		//		envForNewPassword[0] = new ECCurveData(curve, g);
+		//		envForNewPassword[1] = new ECPointData(voterKeyPoint);
+		//		envForNewPassword[2] = new ECPointData(((AdditiveElgamalCiphertext) blindedPasswordOrigDecrypted).getEphemeral(minerKey));
+		//
+		//		fullProofDataUnpacked[0][4] = new CryptoDataArray(pubForNewPassword);
+		//		fullProofDataUnpacked[1][4] = new CryptoDataArray(secForNewPassword);
+		//		fullProofDataUnpacked[2][4] = new CryptoDataArray(envForNewPassword);
 
-
-		CryptoData[] envForNewPassword = new CryptoData[3];
-
-		envForNewPassword[0] = new ECCurveData(curve, g);
-		envForNewPassword[1] = new ECPointData(h1);
-		envForNewPassword[2] = new ECPointData(((AdditiveElgamalCiphertext) blindedPasswordOrigDecrypted).getEphemeral(minerKey));
-
-		fullProofDataUnpacked[0][4] = new CryptoDataArray(pubForNewPassword);
-		fullProofDataUnpacked[1][4] = new CryptoDataArray(envForNewPassword);
-
-		fullProofDataUnpacked[1][5] = new BigIntData(transactionHash);
+		fullProofDataUnpacked[1][3] = new BigIntData(transactionHash);
 
 		for(int i = 0; i < 2; i++) {
 			fullProofData[i] = new CryptoDataArray(fullProofDataUnpacked[i]);
@@ -679,25 +830,34 @@ public class BallotTransaction4_1 implements BallotT {
 		return fullProofData;
 	}
 
-	private void populateRingMembers(ProcessedBlockchain blockchain) {
-		if(ringMembers == null) {
-			ringMembers = new SourceTransaction[ringMembersPos.length];
-			for(int i = 0; i < ringMembers.length; i++) {
-				ringMembers[i] = (SourceTransaction) blockchain.getTransaction(ringMembersPos[i]);
-			}
-		}
-		
-	}
-
 	private ZKPProtocol getVoterProof(SourceTransaction[] ringMembers, AdditiveElgamalPubKey minerKey) {
-		ZKPProtocol[] validTransactionInner = new ZKPProtocol[5];
+		ZKPProtocol[] validTransactionInner = new ZKPProtocol[3];
 
 		//Create proof for one transaction on step 10a
-		ZKPProtocol[] proofOfMatchingInner = new ZKPProtocol[4];
-		//Proof of first bulletpoint is essentially cipher - key is a DHH with ephemeral
-		//Proof of second and third bullet points are proofs of rerandomization:  cipher1 - cipher2, then DHH
-		proofOfMatchingInner[0] = proofOfMatchingInner[1] = proofOfMatchingInner[2] = minerKey.getZKPforRerandomization();
-		proofOfMatchingInner[3] = new ECDummyBallot10bProver();
+		ZKPProtocol[] proofOfMatchingInner = new ZKPProtocol[3];
+		proofOfMatchingInner[0] = minerKey.getZKPforRerandomization();
+		//
+		int[][][] bigStructure = new int[this.password.length*2+1][][];
+		bigStructure[0] = new int[1][2];
+		bigStructure[0][0][0] = 0;
+		bigStructure[0][0][1] = 0;
+		for(int j = 1; j < this.password.length+1; j++) {
+			bigStructure[j*2-1] = new int[2][2];
+			bigStructure[j*2-1][0][0] = j+1;
+			bigStructure[j*2-1][0][1] = 0;
+			bigStructure[j*2-1][1][0] = 1;
+			bigStructure[j*2-1][1][1] = j;
+
+			bigStructure[j*2] = new int[1][2];
+
+			bigStructure[j*2][0][0] = 0;
+			bigStructure[j*2][0][1] = j;
+		}
+
+		proofOfMatchingInner[1] = new ECSchnorrCombinations(bigStructure);
+		int[][][] keyImageStructure = new int[][][] {{{0,0}},{{1,0},{2,1}},{{1,1}}};
+
+		proofOfMatchingInner[2] = new ECSchnorrCombinations(keyImageStructure);//key image
 
 		ZKPProtocol proofOfMatching = new ZeroKnowledgeAndProver(proofOfMatchingInner);
 
@@ -711,28 +871,28 @@ public class BallotTransaction4_1 implements BallotT {
 		//Create proof for step c
 		validTransactionInner[1] = new ECEqualDiscreteLogsForAnyNumberProver(4);
 		//Create proof for step d:
-		validTransactionInner[2] = new ECDummyBallot10dProver();
+		validTransactionInner[2] = new ECSchnorrProver();
 		//Create proof for step e:
 		//		validTransactionInner[4] = new ECEqualDiscreteLogsForAnyNumberProver(2);
-		validTransactionInner[3] = new ECSchnorrCombinations(new int[][][] {{{0, 0}},{{1, 0}}});
-		//  g = 0, h = 1, origEphemeral = 2
-		//  k = 0, x = 1, r_2 = 2
-		int[][][] structure = new int[][][] {{{2, 1},{0, 0},{1, 2}},{{0, 2}},{{0, 1}}};
-		validTransactionInner[4] = new ECSchnorrCombinations(structure);
+		//		validTransactionInner[3] = new ECSchnorrCombinations(new int[][][] {{{0, 0}},{{1, 0}}});
+		//		//  g = 0, h = 1, origEphemeral = 2
+		//		//  k = 0, x = 1, r_2 = 2
+		//		int[][][] structure = new int[][][] {{{2, 1},{0, 0},{1, 2}},{{0, 2}},{{0, 1}}};
+		//		validTransactionInner[4] = new ECSchnorrCombinations(structure);
 		ZKPProtocol fullProof = new ZeroKnowledgeAndProver(validTransactionInner);
 		return fullProof;
 	}
 
 	@Override
 	public AdditiveCiphertext getPasswordCiphertext(int index) {
-		// TODO Auto-generated method stub
-		return null;
+		// 
+		return password[index];
 	}
 
 	@Override
 	public Additive_Pub_Key getVoterPubKey() {
-		// TODO Auto-generated method stub
-		return null;
+		// 
+		return voterKey;
 	}
 
 	// Dummy ballot parts 2 and 3 can be done here.
@@ -745,6 +905,7 @@ public class BallotTransaction4_1 implements BallotT {
 
 	@Override
 	public boolean verifyTransaction(ProcessedBlockchain b) {
+		//		System.out.println("hi");
 		populateRingMembers(b);
 		try {
 			ElectionTransaction electionTx = (ElectionTransaction) b.getTransaction((int) electionPos);
@@ -768,7 +929,7 @@ public class BallotTransaction4_1 implements BallotT {
 
 	@Override
 	public byte[] getVoterProofBytes(){
-		byte[][] objectBytes = new byte[14][]; 
+		byte[][] objectBytes = new byte[11][]; 
 		byte[][] ringMemberBytes = new byte[ringMembers.length][];
 		for(int i = 0; i < ringMembers.length; i++) {
 			ringMemberBytes[i] =  ByteBuffer.wrap(new byte[8]).putLong(ringMembersPos[i]).array();
@@ -781,17 +942,19 @@ public class BallotTransaction4_1 implements BallotT {
 		}
 		objectBytes[1] = Arrays.concatenate(encryptedVotesBytes);
 		objectBytes[2] = voterKey.getBytes();
-		objectBytes[3] = blindedPasswordOrigDecrypted.getBytes();
-		objectBytes[4] = blindedPasswordGuessDecrypted.getBytes();
-		objectBytes[5] = encryptedOldKey.getBytes();
-		objectBytes[6] = origDummy2.getBytes();
-		objectBytes[7] = origPassword2.getBytes();
-		objectBytes[8] = passwordGuessCipher.getBytes();
-		objectBytes[9] = origPassword2Blinded.getBytes();
-		objectBytes[10] = passwordGuessCipherBlinded.getBytes();
-		objectBytes[11] = password.getBytes();
-		objectBytes[12] = keyImageBytes;
-		objectBytes[13] = ByteBuffer.wrap(new byte[8]).putLong(electionID).array();
+		objectBytes[3] = blindedPasswordDiffDecrypted.getBytes();
+		objectBytes[4] = origDummy2.getBytes();
+		objectBytes[5] = passwordGuessCipher.getBytes();
+		objectBytes[6] = origPassword2Preblinded.getBytes();
+		objectBytes[7] = passwordGuessCipherBlinded.getBytes();
+		byte[][] passwordBytes = new byte[password.length][];
+		for(int i = 0; i < password.length; i++) {
+			passwordBytes[i] = password[i].getBytes();
+		}
+		objectBytes[8] = Arrays.concatenate(passwordBytes);
+
+		objectBytes[9] = keyImageBytes;
+		objectBytes[10] = ByteBuffer.wrap(new byte[8]).putLong(electionID).array();
 		return Arrays.concatenate(objectBytes);
 		/*
 		 * 
@@ -829,7 +992,7 @@ public class BallotTransaction4_1 implements BallotT {
 
 	@Override
 	public AdditiveCiphertext getDummyFlag() {
-		// TODO Auto-generated method stub
+		// 
 		return dummyFlag;
 	}
 	@Override
@@ -841,51 +1004,65 @@ public class BallotTransaction4_1 implements BallotT {
 
 	@Override
 	public byte[] getBytes() {
-		// TODO Auto-generated method stub
+		// 
 		return ByteBuffer.wrap(new byte[8]).putLong(position).array();
 	}
 
 	@Override
 	public boolean minerProcessBallot(ProcessedBlockchain blockchain, AdditiveElgamalPrivKey minerPrivKey, AdditiveElgamalPubKey[] individualMinerKeys, ObjectInputStream[] in, ObjectOutputStream[] out, SecureRandom rand) {
+		int party = -1;
 
 		populateRingMembers(blockchain);
-		
-		int party = -1;
-		
 		Election election = ((ElectionTransaction) blockchain.getTransaction((int) electionPos)).getElection();
 		AdditiveElgamalPubKey minerKey = election.getMinerKey();
-		AdditiveElgamalCiphertext passwordDifferenceCipher = (AdditiveElgamalCiphertext) this.blindedPasswordOrigDecrypted.homomorphicAdd(this.blindedPasswordGuessDecrypted.negate(minerKey), voterKey);
+
+		//Beginning for Dummy Protocol Step 2
+
+		//Step 1
+		AdditiveElgamalCiphertext passwordDifferenceCipher = (AdditiveElgamalCiphertext) blindedPasswordDiffDecrypted;
 
 		ECCurve curve = minerKey.getCurve();
 		ECPoint g = minerKey.getG();
 
 		int rowCount = election.getRowCount();
-		int abbridgedRowCount = election.getAbbridgedRowCount();
+		int abbridgedRowCount = election.getAbbridgedRowCount(); //abbridgedRowCount is mew
 		boolean retry = false;
 		do {
 			tableOmega = null;
 			retry = false;
-			AdditiveCiphertext[] table1 = randomBits(abbridgedRowCount-1, minerKey, rand, out, in);
-			AdditiveCiphertext[][] table3 = new AdditiveElgamalCiphertext[election.getAbbridgedRowCount()][3];
+
+			//Step 2
+			AdditiveCiphertext[] table0 = randomBits(abbridgedRowCount-1, minerKey, rand, out, in);
+
+			//Step 3
+			AdditiveCiphertext[][] table1 = new AdditiveElgamalCiphertext[election.getAbbridgedRowCount()][3];
 			for(int i = 0; i < abbridgedRowCount-1; i++) {
-				table3[i][0] = minerKey.encrypt(BigInteger.valueOf(i+1), BigInteger.ZERO).homomorphicAdd(table1[i], minerKey);
-				table3[i][1] = minerKey.encrypt(BigInteger.valueOf(i+1), BigInteger.ZERO);
-				table3[i][2] = minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO);
+				table1[i][0] = minerKey.encrypt(BigInteger.valueOf(i+1), BigInteger.ZERO).homomorphicAdd(table0[i], minerKey);
+				table1[i][1] = minerKey.encrypt(BigInteger.valueOf(i+1), BigInteger.ZERO);
+				table1[i][2] = minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO);
 			}
-			table3[abbridgedRowCount-1][0] = passwordDifferenceCipher;
-			table3[abbridgedRowCount-1][1] = minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO);
-			table3[abbridgedRowCount-1][2] = minerKey.encrypt(BigInteger.ONE, BigInteger.ZERO);
+			table1[abbridgedRowCount-1][0] = passwordDifferenceCipher;
+			table1[abbridgedRowCount-1][1] = minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO);
+			table1[abbridgedRowCount-1][2] = minerKey.encrypt(BigInteger.ONE, BigInteger.ZERO);
 
-			AdditiveCiphertext[][] table4 = shuffleInternal(table3, in, out, minerKey, rand);
 
-			if(table4 == null) return false;
+			//Step 4
+			AdditiveCiphertext[][] table2 = shuffleInternal(table1, in, out, minerKey, rand);
+
+			if(table2 == null) return false;
 
 			ZKPProtocol proofOfStuff = new ECEqualDiscreteLogsProver();
+
+			//Step 5
 			tableOmega = passwordDifferenceCipher;
 			int countEqual = 0;
 			int countUnequal = 0;
-			for(int i = 0; i < table4.length; i++) {
-				AdditiveElgamalCiphertext testOrig = (AdditiveElgamalCiphertext) table4[i][0].homomorphicAdd(table4[i][1].negate(minerKey), minerKey);
+
+			//Step 6
+			for(int i = 0; i < table2.length; i++) {
+
+				//ysshuffleif(in[0] == null) System.out.print((char)('A' + i%26));
+				AdditiveElgamalCiphertext testOrig = (AdditiveElgamalCiphertext) table2[i][0].homomorphicAdd(table2[i][1].negate(minerKey), minerKey);
 				int[] order = MinerThread.chooseOrder(in, out, minerKey, rand);
 				AdditiveElgamalCiphertext test = testOrig;
 
@@ -900,7 +1077,7 @@ public class BallotTransaction4_1 implements BallotT {
 							try {
 								out[k].writeObject(testNew);
 							} catch (IOException e) {
-								// TODO Auto-generated catch block
+								// 
 								e.printStackTrace();
 							}
 						}
@@ -916,7 +1093,7 @@ public class BallotTransaction4_1 implements BallotT {
 							transcript = proofOfStuff.proveFiatShamir(proverInputs[0], proverInputs[1], proverInputs[2]);
 						} catch (ClassNotFoundException | IOException | MultipleTrueProofException
 								| NoTrueProofException | ArraySizesDoNotMatchException e) {
-							// TODO Auto-generated catch block
+							// 
 							e.printStackTrace();
 						}
 
@@ -925,21 +1102,21 @@ public class BallotTransaction4_1 implements BallotT {
 							try {
 								out[k].writeObject(transcript);
 							} catch (IOException e) {
-								// TODO Auto-generated catch block
+								// 
 								e.printStackTrace();
 							}
 						}
-						
+
 						for(int k = 0; k < in.length; k++) {
 							if(out[k] == null) continue;
 							try {
 								out[k].flush();
 							} catch (IOException e) {
-								// TODO Auto-generated catch block
+								// 
 								e.printStackTrace();
 							}
 						}
-						
+
 						test = testNew;
 					} else {//someone else's turn
 						try {
@@ -956,7 +1133,7 @@ public class BallotTransaction4_1 implements BallotT {
 							}
 							test = testNew;
 						} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException | ArraySizesDoNotMatchException e) {
-							// TODO Auto-generated catch block
+							// 
 							e.printStackTrace();
 							return false;
 						}
@@ -972,7 +1149,7 @@ public class BallotTransaction4_1 implements BallotT {
 							try {
 								out[k].writeObject(testDec);
 							} catch (IOException e) {
-								// TODO Auto-generated catch block
+								// 
 								e.printStackTrace();
 							}
 						}
@@ -987,7 +1164,7 @@ public class BallotTransaction4_1 implements BallotT {
 							transcript = proofOfStuff.proveFiatShamir(proverInputs[0], proverInputs[1], proverInputs[2]);
 						} catch (ClassNotFoundException | IOException | MultipleTrueProofException
 								| NoTrueProofException | ArraySizesDoNotMatchException e) {
-							// TODO Auto-generated catch block
+							// 
 							e.printStackTrace();
 						}
 
@@ -996,7 +1173,7 @@ public class BallotTransaction4_1 implements BallotT {
 							try {
 								out[k].writeObject(transcript);
 							} catch (IOException e) {
-								// TODO Auto-generated catch block
+								// 
 								e.printStackTrace();
 							}
 						}
@@ -1005,7 +1182,7 @@ public class BallotTransaction4_1 implements BallotT {
 							try {
 								out[k].flush();
 							} catch (IOException e) {
-								// TODO Auto-generated catch block
+								// 
 								e.printStackTrace();
 							}
 						}
@@ -1025,23 +1202,30 @@ public class BallotTransaction4_1 implements BallotT {
 							}
 							test = testDec;
 						} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException | ArraySizesDoNotMatchException e) {
-							// TODO Auto-generated catch block
+							// 
 							e.printStackTrace();
 							return false;
 						}
 					}
 				}
+
+				//Step 6.1
 				if(curve.getInfinity().equals(test.getCipher(minerKey))) {
-					tableOmega = tableOmega.homomorphicAdd(table4[i][2], minerKey);
+					tableOmega = tableOmega.homomorphicAdd(table2[i][2], minerKey);
 					countEqual++;
 				}else {
 					countUnequal++;
 				}
+				//Step 6.2
 				if(i == election.getResetRowCount()) {
 					if(countEqual == i || countUnequal == i) {
 						retry = true;
 						if(in[0] == null) {
 							System.out.print("reshuffle required");
+						}
+						if(!retry) {
+							if(in[0] == null) System.out.print("RESHUFFLE DISABLED!!!");
+							continue;
 						}
 						try {
 							for(int j = 0; j < in.length; j++) {
@@ -1051,7 +1235,7 @@ public class BallotTransaction4_1 implements BallotT {
 								}
 							}
 						} catch (IOException e) {
-							// TODO Auto-generated catch block
+							// 
 							e.printStackTrace();
 						}
 						break;
@@ -1070,7 +1254,7 @@ public class BallotTransaction4_1 implements BallotT {
 			//						try {
 			//							out[k].writeObject(testDec);
 			//						} catch (IOException e) {
-			//							// TODO Auto-generated catch block
+			//							// 
 			//							e.printStackTrace();
 			//						}
 			//					}
@@ -1085,7 +1269,7 @@ public class BallotTransaction4_1 implements BallotT {
 			//						transcript = proofOfStuff.proveFiatShamir(proverInputs[0], proverInputs[1], proverInputs[2]);
 			//					} catch (ClassNotFoundException | IOException | MultipleTrueProofException
 			//							| NoTrueProofException | ArraySizesDoNotMatchException e) {
-			//						// TODO Auto-generated catch block
+			//						// 
 			//						e.printStackTrace();
 			//					}
 			//					
@@ -1094,7 +1278,7 @@ public class BallotTransaction4_1 implements BallotT {
 			//						try {
 			//							out[k].writeObject(transcript);
 			//						} catch (IOException e) {
-			//							// TODO Auto-generated catch block
+			//							// 
 			//							e.printStackTrace();
 			//						}
 			//					}
@@ -1103,7 +1287,7 @@ public class BallotTransaction4_1 implements BallotT {
 			//						try {
 			//							out[k].flush();
 			//						} catch (IOException e) {
-			//							// TODO Auto-generated catch block
+			//							// 
 			//							e.printStackTrace();
 			//						}
 			//					}
@@ -1123,7 +1307,7 @@ public class BallotTransaction4_1 implements BallotT {
 			//						}
 			//						test = testDec;
 			//					} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException | ArraySizesDoNotMatchException e) {
-			//						// TODO Auto-generated catch block
+			//						// 
 			//						e.printStackTrace();
 			//						return false;
 			//					}
@@ -1136,12 +1320,12 @@ public class BallotTransaction4_1 implements BallotT {
 			//			}
 		} while(retry);
 
-		EncryptedVote[] zeroVote = new EncryptedVote[voterVotes.length];
+
+
+		//Dummy Protocol Step 3
+
 		EncryptedVote[] voterVoteWithoutProof = new EncryptedVote[voterVotes.length];
-		for(int i = 0; i < voterVotes.length; i++) {
-			zeroVote[i] = election.getRace(i).zeroVote(voterVotes[i]);
-			voterVoteWithoutProof[i] = voterVotes[i].withoutProof();
-		}
+
 		{
 			ZKPProtocol ballotTableProof;
 			ZKPProtocol[] proofArray = new ZKPProtocol[2];
@@ -1153,16 +1337,15 @@ public class BallotTransaction4_1 implements BallotT {
 			proofArray[0] = proofArray[1] = new ZeroKnowledgeAndProver(midProof);
 			ballotTableProof = new ZeroKnowledgeOrProver(proofArray, minerKey.getOrder());
 
-			
+
 			intermediateDummyTables = new ElectionTableRowInner[in.length][];
 			dummyProofTranscripts = new CryptoData[in.length][];
-			ElectionTableRowInner[] dummyTable0 = new ElectionTableRowInner[2];		
-			dummyTable0[0] = new ElectionTableRowInner(minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO), null, passwordDifferenceCipher);
-			dummyTable0[1] = new ElectionTableRowInner(minerKey.encrypt(BigInteger.ONE, BigInteger.ZERO), null, tableOmega);
+			ElectionTableRowInner[] dummyTable0 = new ElectionTableRowInner[2];
+			//Step 1.
+			dummyTable0[0] = new ElectionTableRowInner(passwordDifferenceCipher, null, origDummy2);
+			dummyTable0[1] = new ElectionTableRowInner(tableOmega.homomorphicAdd(passwordDifferenceCipher.negate(minerKey), minerKey), null, minerKey.encrypt(BigInteger.ZERO, BigInteger.ZERO));
 			int[] order = MinerThread.chooseOrder(in, out, minerKey, rand);
 			for(int i = 0; i < in.length; i++) {
-
-				if(in[0] == null) System.out.print((char)('a' + i%26));
 				ElectionTableRowInner[] orig;
 				if(i == 0) orig = dummyTable0;
 				else orig = intermediateDummyTables[i-1];
@@ -1190,7 +1373,7 @@ public class BallotTransaction4_1 implements BallotT {
 								out[j].writeObject(intermediateDummyTables[i]);
 								out[j].flush();
 							} catch (IOException e) {
-								// TODO Auto-generated catch block
+								// 
 								e.printStackTrace();
 							}
 						}
@@ -1202,7 +1385,7 @@ public class BallotTransaction4_1 implements BallotT {
 						dummyProofTranscripts[i] = ballotTableProof.proveFiatShamir(fullProofData[0], fullProofData[1], fullProofData[2]);
 					} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException
 							| ArraySizesDoNotMatchException e) {
-						// TODO Auto-generated catch block
+						// 
 						e.printStackTrace();
 					}
 					for(int j = 0; j < in.length; j++) {
@@ -1211,7 +1394,7 @@ public class BallotTransaction4_1 implements BallotT {
 								out[j].writeObject(dummyProofTranscripts[i]);
 								out[j].flush();
 							} catch (IOException e) {
-								// TODO Auto-generated catch block
+								// 
 								e.printStackTrace();
 							}
 						}
@@ -1222,7 +1405,7 @@ public class BallotTransaction4_1 implements BallotT {
 					try {
 						intermediateDummyTables[i] = (ElectionTableRowInner[]) in[order[i]].readObject();
 					} catch (ClassNotFoundException | IOException e) {
-						// TODO Auto-generated catch block
+						// 
 						e.printStackTrace();
 					}
 
@@ -1233,7 +1416,7 @@ public class BallotTransaction4_1 implements BallotT {
 							System.out.println("Failed Dummy Ballot Proof");
 						}
 					} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException | ArraySizesDoNotMatchException e) {
-						// TODO Auto-generated catch block
+						// 
 						e.printStackTrace();
 					}
 
@@ -1247,7 +1430,7 @@ public class BallotTransaction4_1 implements BallotT {
 			ZKPProtocol proofOfStuff = new ECEqualDiscreteLogsProver();
 			ECPoint[][] combinedA = new ECPoint[2][2];
 			BigInteger[] combinedZ = new BigInteger[2];
-			
+
 			//first, randomize.  Then prove.
 			BigInteger[] toScalarMultiply = new BigInteger[] {minerKey.generateEphemeral(rand), minerKey.generateEphemeral(rand)};
 			dummyInputsRandomized = new AdditiveElgamalCiphertext[2];
@@ -1261,7 +1444,7 @@ public class BallotTransaction4_1 implements BallotT {
 					out[k].writeObject(dummyInputsRandomized);
 					out[k].flush();
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
+					// 
 					e.printStackTrace();
 				}
 			}
@@ -1273,11 +1456,11 @@ public class BallotTransaction4_1 implements BallotT {
 						dummyInputsRandomized[i] = (AdditiveElgamalCiphertext) dummyInputsRandomized[i].homomorphicAdd(other[i], minerKey);
 					}
 				} catch (IOException | ClassNotFoundException e) {
-					// TODO Auto-generated catch block
+					// 
 					e.printStackTrace();
 				}
 			}
-			
+
 			for(int i = 0; i < 2; i++) {
 
 				AdditiveElgamalCiphertext test = (AdditiveElgamalCiphertext) intermediateDummyTables[in.length - 1][i].compare;
@@ -1293,7 +1476,7 @@ public class BallotTransaction4_1 implements BallotT {
 					combinedA[i][0] = aUnpacked[0].getECPointData(curve);
 					combinedA[i][1] = aUnpacked[1].getECPointData(curve);
 				} catch (MultipleTrueProofException	| NoTrueProofException | ArraySizesDoNotMatchException e) {
-					// TODO Auto-generated catch block
+					// 
 					e.printStackTrace();
 				}
 
@@ -1343,28 +1526,28 @@ public class BallotTransaction4_1 implements BallotT {
 				} catch (NoTrueProofException | MultipleTrueProofException e) {
 					e.printStackTrace();
 				}
-					
+
 				dummyTableRandomizeTranscript[i][1] = new CryptoDataArray(new BigInteger[] {combinedZ[i]});
 				try {
 					if(proofOfStuff.verifyFiatShamir(proverInputs[0], dummyTableRandomizeTranscript[i][0], dummyTableRandomizeTranscript[i][1], proverInputs[2])) {
-						
+
 					} else {
 						System.out.println("The dream is deaed :-( -1");
 					}
 				} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException
 						| ArraySizesDoNotMatchException e) {
-					// TODO Auto-generated catch block
+					// 
 					e.printStackTrace();
 				}
 
 			}
-			
-			
+
+
 
 			dummyTableDecryptTranscript = new CryptoData[2][2];
 			combinedA = new ECPoint[2][2];
 			combinedZ = new BigInteger[2];
-			
+
 			//first, decrypt.  Then prove.
 			toScalarMultiply = new BigInteger[] {minerKey.generateEphemeral(rand), minerKey.generateEphemeral(rand)};
 			ECPoint[] testDec = new ECPoint[2];
@@ -1379,7 +1562,7 @@ public class BallotTransaction4_1 implements BallotT {
 					out[k].writeObject(testDec[1].getEncoded(true));
 					out[k].flush();
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
+					// 
 					e.printStackTrace();
 				}
 			}
@@ -1393,7 +1576,7 @@ public class BallotTransaction4_1 implements BallotT {
 						testDec[i] = testDec[i].add(other[i]);
 					}
 				} catch (IOException | ClassNotFoundException e) {
-					// TODO Auto-generated catch block
+					// 
 					e.printStackTrace();
 				}
 			}
@@ -1413,7 +1596,7 @@ public class BallotTransaction4_1 implements BallotT {
 					combinedA[i][0] = aUnpacked[0].getECPointData(curve);
 					combinedA[i][1] = aUnpacked[1].getECPointData(curve);
 				} catch (MultipleTrueProofException	| NoTrueProofException | ArraySizesDoNotMatchException e) {
-					// TODO Auto-generated catch block
+					// 
 					e.printStackTrace();
 				}
 
@@ -1463,17 +1646,17 @@ public class BallotTransaction4_1 implements BallotT {
 				} catch (NoTrueProofException | MultipleTrueProofException e) {
 					e.printStackTrace();
 				}
-					
+
 				dummyTableDecryptTranscript[i][1] = new CryptoDataArray(new BigInteger[] {combinedZ[i]});
 				try {
 					if(proofOfStuff.verifyFiatShamir(proverInputs[0], dummyTableDecryptTranscript[i][0], dummyTableDecryptTranscript[i][1], proverInputs[2])) {
-						
+
 					} else {
 						System.out.println("The dream is deaed :-( 0");
 					}
 				} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException
 						| ArraySizesDoNotMatchException e) {
-					// TODO Auto-generated catch block
+					// 
 					e.printStackTrace();
 				}
 			}
@@ -1495,27 +1678,27 @@ public class BallotTransaction4_1 implements BallotT {
 			System.out.println("Something bad happened in dummy mix and match");
 			return false;
 		}
-			// PASSWORD TIME  *************************************************************************************************************************************************************************
-		
+		// PASSWORD TIME  *************************************************************************************************************************************************************************
+
 		ElectionTableRowInner[] passwordTable = new ElectionTableRowInner[2];
-		passwordTable[0] = new ElectionTableRowInner(minerKey.getEmptyCiphertext().homomorphicAdd(dummyTableOutput.negate(minerKey), minerKey), voterVotes, dummyFlagOutput);
-		passwordTable[1] = new ElectionTableRowInner(tableOmega.homomorphicAdd(passwordDifferenceCipher.negate(minerKey), minerKey), zeroVote, minerKey.encrypt(BigInteger.ONE, BigInteger.ZERO));
+		passwordTable[0] = new ElectionTableRowInner(minerKey.getEmptyCiphertext().homomorphicAdd(dummyTableOutput.negate(minerKey), minerKey),null, dummyFlagOutput);
+		passwordTable[1] = new ElectionTableRowInner(tableOmega.homomorphicAdd(dummyTableOutput.negate(minerKey), minerKey), null, minerKey.encrypt(BigInteger.ONE, BigInteger.ZERO));
 		//Shuffle Table
-		
+
 		{
 			ZKPProtocol ballotTableProof;
 			ZKPProtocol[] proofArray = new ZKPProtocol[2];
-			ZKPProtocol[] midProof = new ZKPProtocol[3];
+			ZKPProtocol[] midProof = new ZKPProtocol[2];
 			ZKPProtocol[] midProof2 = new ZKPProtocol[2];
 			midProof2[0] = midProof2[1] = minerKey.getZKPforRerandomization();
-			midProof[0] = midProof[2] = new ZeroKnowledgeAndProver(midProof2);
-			ZKPProtocol[] innerProof = new ZKPProtocol[election.getNumRace()];
-			for(int i = 0; i < innerProof.length; i++) {
-				ZKPProtocol[] innerInnerProof = new ZKPProtocol[2];
-				innerInnerProof[0] = innerInnerProof[1] = zeroVote[i].getRandomizationProof(election.getRace(i).getPubKey());
-				innerProof[i] = new ZeroKnowledgeAndProver(innerInnerProof);
-			}
-			midProof[1] = new ZeroKnowledgeAndProver(innerProof);
+			midProof[0] = midProof[1] = new ZeroKnowledgeAndProver(midProof2);
+			//			ZKPProtocol[] innerProof = new ZKPProtocol[election.getNumRace()];
+			//			for(int i = 0; i < innerProof.length; i++) {
+			//				ZKPProtocol[] innerInnerProof = new ZKPProtocol[2];
+			//				innerInnerProof[0] = innerInnerProof[1] = zeroVote[i].getRandomizationProof(election.getRace(i).getPubKey());
+			//				innerProof[i] = new ZeroKnowledgeAndProver(innerInnerProof);
+			//			}
+			//			midProof[1] = new ZeroKnowledgeAndProver(innerProof);
 			proofArray[0] = proofArray[1] = new ZeroKnowledgeAndProver(midProof);
 			ballotTableProof = new ZeroKnowledgeOrProver(proofArray, minerKey.getOrder());
 
@@ -1524,8 +1707,6 @@ public class BallotTransaction4_1 implements BallotT {
 			passwordProofTranscripts = new CryptoData[in.length][];
 			int[] order = MinerThread.chooseOrder(in, out, minerKey, rand);
 			for(int i = 0; i < in.length; i++) {
-
-				if(in[0] == null) System.out.print((char)('A' + i%26));
 				ElectionTableRowInner[] orig;
 				if(i == 0) orig = passwordTable;
 				else orig = intermediatePasswordTables[i-1];
@@ -1554,11 +1735,10 @@ public class BallotTransaction4_1 implements BallotT {
 					for(int j = 0; j < in.length; j++) {
 						if(out[j] != null) {
 							try {
-								out[j].reset();
 								out[j].writeObject(intermediatePasswordTables[i]);
 								out[j].flush();
 							} catch (IOException e) {
-								// TODO Auto-generated catch block
+								// 
 								e.printStackTrace();
 							}
 						}
@@ -1570,7 +1750,7 @@ public class BallotTransaction4_1 implements BallotT {
 						passwordProofTranscripts[i] = ballotTableProof.proveFiatShamir(fullProofData[0], fullProofData[1], fullProofData[2]);
 					} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException
 							| ArraySizesDoNotMatchException e) {
-						// TODO Auto-generated catch block
+						// 
 						e.printStackTrace();
 					}
 					for(int j = 0; j < in.length; j++) {
@@ -1579,7 +1759,7 @@ public class BallotTransaction4_1 implements BallotT {
 								out[j].writeObject(passwordProofTranscripts[i]);
 								out[j].flush();
 							} catch (IOException e) {
-								// TODO Auto-generated catch block
+								// 
 								e.printStackTrace();
 							}
 						}
@@ -1590,7 +1770,7 @@ public class BallotTransaction4_1 implements BallotT {
 					try {
 						intermediatePasswordTables[i] = (ElectionTableRowInner[]) in[order[i]].readObject();
 					} catch (ClassNotFoundException | IOException e) {
-						// TODO Auto-generated catch block
+						// 
 						e.printStackTrace();
 					}
 
@@ -1601,7 +1781,7 @@ public class BallotTransaction4_1 implements BallotT {
 							System.out.println("Failed Password Ballot Proof");
 						}
 					} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException | ArraySizesDoNotMatchException e) {
-						// TODO Auto-generated catch block
+						// 
 						e.printStackTrace();
 					}
 
@@ -1609,13 +1789,13 @@ public class BallotTransaction4_1 implements BallotT {
 
 			}
 		}
-		
-		
+
+
 		passwordTableRandomizeTranscript = new CryptoData[2][2];
 		ZKPProtocol proofOfStuff = new ECEqualDiscreteLogsProver();
 		ECPoint[][] combinedA = new ECPoint[2][2];
 		BigInteger[] combinedZ = new BigInteger[2];
-		
+
 		//first, randomize.  Then prove.
 		BigInteger[] toScalarMultiply = new BigInteger[] {minerKey.generateEphemeral(rand), minerKey.generateEphemeral(rand)};
 		passwordInputsRandomized = new AdditiveElgamalCiphertext[2];
@@ -1629,7 +1809,7 @@ public class BallotTransaction4_1 implements BallotT {
 				out[k].writeObject(passwordInputsRandomized);
 				out[k].flush();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				// 
 				e.printStackTrace();
 			}
 		}
@@ -1641,11 +1821,11 @@ public class BallotTransaction4_1 implements BallotT {
 					passwordInputsRandomized[i] = (AdditiveElgamalCiphertext) passwordInputsRandomized[i].homomorphicAdd(other[i], minerKey);
 				}
 			} catch (IOException | ClassNotFoundException e) {
-				// TODO Auto-generated catch block
+				// 
 				e.printStackTrace();
 			}
 		}
-		
+
 		for(int i = 0; i < 2; i++) {
 
 			AdditiveElgamalCiphertext test = (AdditiveElgamalCiphertext) intermediatePasswordTables[in.length - 1][i].compare;
@@ -1661,7 +1841,7 @@ public class BallotTransaction4_1 implements BallotT {
 				combinedA[i][0] = aUnpacked[0].getECPointData(curve);
 				combinedA[i][1] = aUnpacked[1].getECPointData(curve);
 			} catch (MultipleTrueProofException	| NoTrueProofException | ArraySizesDoNotMatchException e) {
-				// TODO Auto-generated catch block
+				// 
 				e.printStackTrace();
 			}
 
@@ -1711,29 +1891,29 @@ public class BallotTransaction4_1 implements BallotT {
 			} catch (NoTrueProofException | MultipleTrueProofException e) {
 				e.printStackTrace();
 			}
-				
+
 			passwordTableRandomizeTranscript[i][1] = new CryptoDataArray(new BigInteger[] {combinedZ[i]});
-			
+
 			try {
 				if(proofOfStuff.verifyFiatShamir(proverInputs[0], passwordTableRandomizeTranscript[i][0], passwordTableRandomizeTranscript[i][1], proverInputs[2])) {
-					
+
 				} else {
 					System.out.println("The dream is deaed :-(");
 				}
 			} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException
 					| ArraySizesDoNotMatchException e) {
-				// TODO Auto-generated catch block
+				// 
 				e.printStackTrace();
 			}
 
 		}
-		
-		
+
+
 
 		passwordTableDecryptTranscript = new CryptoData[2][2];
 		combinedA = new ECPoint[2][2];
 		combinedZ = new BigInteger[2];
-		
+
 		//first, decrypt.  Then prove.
 		toScalarMultiply = new BigInteger[] {minerKey.generateEphemeral(rand), minerKey.generateEphemeral(rand)};
 		ECPoint[] testDec = new ECPoint[2];
@@ -1748,7 +1928,7 @@ public class BallotTransaction4_1 implements BallotT {
 				out[k].writeObject(testDec[1].getEncoded(true));
 				out[k].flush();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				// 
 				e.printStackTrace();
 			}
 		}
@@ -1762,7 +1942,7 @@ public class BallotTransaction4_1 implements BallotT {
 					testDec[i] = testDec[i].add(other[i]);
 				}
 			} catch (IOException | ClassNotFoundException e) {
-				// TODO Auto-generated catch block
+				// 
 				e.printStackTrace();
 			}
 		}
@@ -1782,7 +1962,7 @@ public class BallotTransaction4_1 implements BallotT {
 				combinedA[i][0] = aUnpacked[0].getECPointData(curve);
 				combinedA[i][1] = aUnpacked[1].getECPointData(curve);
 			} catch (MultipleTrueProofException	| NoTrueProofException | ArraySizesDoNotMatchException e) {
-				// TODO Auto-generated catch block
+				// 
 				e.printStackTrace();
 			}
 
@@ -1832,19 +2012,19 @@ public class BallotTransaction4_1 implements BallotT {
 			} catch (NoTrueProofException | MultipleTrueProofException e) {
 				e.printStackTrace();
 			}
-				
+
 			passwordTableDecryptTranscript[i][1] = new CryptoDataArray(new BigInteger[] {combinedZ[i]});
-			
-			
+
+
 			try {
 				if(proofOfStuff.verifyFiatShamir(proverInputs[0], passwordTableDecryptTranscript[i][0], passwordTableDecryptTranscript[i][1], proverInputs[2])) {
-					
+
 				} else {
 					System.out.println("The dream is deaed :-( 2");
 				}
 			} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException
 					| ArraySizesDoNotMatchException e) {
-				// TODO Auto-generated catch block
+				// 
 				e.printStackTrace();
 			}
 		}
@@ -1853,65 +2033,526 @@ public class BallotTransaction4_1 implements BallotT {
 				System.out.println("Bad Password Table Error 1");
 				return false;
 			}
-			countedVotes = intermediatePasswordTables[in.length-1][0].output1;
-			dummyFlag = intermediatePasswordTables[in.length-1][0].output2;
+			//			countedVotes = intermediatePasswordTables[in.length-1][0].output1;
+			dummyFlag = (AdditiveElgamalCiphertext) intermediatePasswordTables[in.length-1][0].output2;
 		} else if(passwordInputsDecrypted[1].getCipher(minerKey).equals(curve.getInfinity())) {
-			countedVotes = intermediatePasswordTables[in.length-1][1].output1;
-			dummyFlag = intermediatePasswordTables[in.length-1][1].output2;
+			//			countedVotes = intermediatePasswordTables[in.length-1][1].output1;
+			dummyFlag = (AdditiveElgamalCiphertext) intermediatePasswordTables[in.length-1][1].output2;
 		} else {
 			System.out.println("Bad Password Table Error 2");
 			return false;
 		}
+
+		AdditiveElgamalCiphertext[] ciphertextSet1Local = new AdditiveElgamalCiphertext[in.length];
+		BigInteger[] values = new BigInteger[in.length];
+		values[in.length-1] = BigInteger.ZERO;
+		BigInteger[] ephemerals = new BigInteger[in.length];
+		BigInteger ephemeralSum = BigInteger.ZERO;
+		for(int i = 0; i < ciphertextSet1Local.length-1; i++){
+			values[i] = minerKey.generateEphemeral(rand);
+			ephemerals[i] = minerKey.generateEphemeral(rand);
+			ephemeralSum = ephemeralSum.add(ephemerals[i]);
+			values[in.length-1] = values[in.length-1].subtract(values[i]);
+			ciphertextSet1Local[i] = (AdditiveElgamalCiphertext) minerKey.encrypt(values[i], ephemerals[i]);		
+		}
 		{
-			ByteArrayOutputStream out1 = new ByteArrayOutputStream();
-			try {
-				ObjectOutputStream out2 = new ObjectOutputStream(out1);
-				out2.writeObject(this);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			ephemerals[in.length-1] = minerKey.generateEphemeral(rand);
+			ephemeralSum = ephemeralSum.add(ephemerals[in.length-1]);
+			ciphertextSet1Local[in.length-1] = (AdditiveElgamalCiphertext) minerKey.encrypt(values[in.length-1], ephemerals[in.length-1]);
+		}
+		{	//create and prove ciphertexts.
+			int[][][] structure = new int[][][]{{{0, 0},{1,1}},{{0,1}}};
+			ZKPProtocol proofOfKnowledge = new ECSchnorrCombinations(structure);
+			ZKPProtocol[] innerProof = new ZKPProtocol[in.length+1];
+			for(int i = 0; i < in.length; i++) {
+				innerProof[i] = proofOfKnowledge;
 			}
-		}	
-//		private CryptoData[][] dummyTableRandomizeTranscript;
-//		private CryptoData[][] dummyTableDecryptTranscript;
-//		private CryptoData[][] passwordTableRandomizeTranscript;
-//		private ElectionTableRowInner[][] intermediatePasswordTables;
-//		private CryptoData[][] passwordProofTranscripts;
-//		private CryptoData[][] passwordTableDecryptTranscript;	
-//		private ElectionTableRowInner[][] intermediateDummyTables;
-//		private CryptoData[][] dummyProofTranscripts;
-		{
-			ByteArrayOutputStream out1 = new ByteArrayOutputStream();
+			innerProof[in.length] = minerKey.getZKPforRerandomization();
+			ZKPProtocol and = new ZeroKnowledgeAndProver(innerProof);
+			CryptoData[] proverData = new CryptoData[3];
+			CryptoData[] publicData = new CryptoData[in.length+1];
+			for(int i = 0; i < in.length; i++) {
+				CryptoData[] publicDataInner = new CryptoData[2];
+				publicDataInner[0] = new ECPointData(ciphertextSet1Local[i].getCipher(minerKey));
+				publicDataInner[1] = new ECPointData(ciphertextSet1Local[i].getEphemeral(minerKey));
+				publicData[i] = new CryptoDataArray(publicDataInner);
+			}
+			{
+				AdditiveElgamalCiphertext mySum = (AdditiveElgamalCiphertext) minerKey.encrypt(BigInteger.ZERO, ephemeralSum);
+				CryptoData[] publicDataInner = new CryptoData[2];
+				publicDataInner[0] = new ECPointData(mySum.getEphemeral(minerKey));
+				publicDataInner[1] = new ECPointData(mySum.getCipher(minerKey));
+				publicData[in.length] = new CryptoDataArray(publicDataInner);
+			}
+			CryptoData[] envData = new CryptoData[in.length+1];
+			CryptoData[] envDataInner = new CryptoData[2];
+			envDataInner[0] = new ECCurveData(g.getCurve(), g);
+			envDataInner[1] = new ECPointData(minerKey.getY());
+			envData[in.length] = new CryptoDataArray(envDataInner);
+			for(int i = 0; i < in.length; i++) {
+				envData[i] = envData[in.length];
+			}
+			CryptoData[] secretData = new CryptoData[in.length+1];
+			for(int i = 0; i < in.length; i++) {
+				CryptoData[] secretDataInner = new CryptoData[4];
+				secretDataInner[0] = new BigIntData(minerKey.generateEphemeral(rand));
+				secretDataInner[1] = new BigIntData(minerKey.generateEphemeral(rand));
+				secretDataInner[2] = new BigIntData(values[i]);
+				secretDataInner[3] = new BigIntData(ephemerals[i]);
+				secretData[i] = new CryptoDataArray(secretDataInner);
+			}
+			{
+				CryptoData[] secretDataInner = new CryptoData[2];
+				secretDataInner[0] = new BigIntData(minerKey.generateEphemeral(rand));
+				secretDataInner[1] = new BigIntData(ephemeralSum);
+				secretData[in.length] = new CryptoDataArray(secretDataInner);
+			}
+			proverData[0] = new CryptoDataArray(publicData);
+			proverData[1] = new CryptoDataArray(secretData);
+			proverData[2] = new CryptoDataArray(envData);
 			try {
-				ObjectOutputStream out2 = new ObjectOutputStream(out1);
-				out2.writeObject(dummyTableRandomizeTranscript);
-				out2.writeObject(dummyTableDecryptTranscript);
-				out2.writeObject(passwordTableRandomizeTranscript);
-				out2.writeObject(intermediatePasswordTables);
-				out2.writeObject(passwordProofTranscripts);
-				out2.writeObject(passwordTableDecryptTranscript);
-				out2.writeObject(intermediateDummyTables);
-				out2.writeObject(dummyProofTranscripts);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				CryptoData[] transcript = and.proveFiatShamir(proverData[0], proverData[1], proverData[2]);
+
+				ciphertextSet1 = new AdditiveElgamalCiphertext[in.length][];
+				ciphertextSet1[party] = ciphertextSet1Local;
+				ciphertextSet1Transcripts = new CryptoData[in.length][];
+				ciphertextSet1Transcripts[party] = transcript;
+				for(int i = 1; i < in.length; i++) {
+					if(in[(i + party) % in.length] != null) {
+						out[(i + party) % in.length].writeObject(ciphertextSet1Local);
+						out[(i + party) % in.length].writeObject(transcript);
+					}
+				}
+				for(int i = 1; i < in.length; i++) {
+					if(in[(i + party) % in.length] != null) {
+						out[(i + party) % in.length].flush();
+					}
+				}
+				CryptoData[] verifierData = new CryptoData[2];
+				verifierData[1] = proverData[2];
+				for(int i = in.length-1; i >= 1; i--) {
+					if(in[(i + party) % in.length] != null) {
+						ciphertextSet1[(i + party) % in.length] = (AdditiveElgamalCiphertext[]) in[(i + party) % in.length].readObject();
+						ciphertextSet1Transcripts[(i + party) % in.length] = (CryptoData[]) in[(i + party) % in.length].readObject();
+						//						CryptoData[] publicData = new CryptoData[in.length+1];
+						for(int j = 0; j < in.length; j++) {
+							CryptoData[] publicDataInner = new CryptoData[2];
+							publicDataInner[0] = new ECPointData(ciphertextSet1[(i + party) % in.length][j].getCipher(minerKey));
+							publicDataInner[1] = new ECPointData(ciphertextSet1[(i + party) % in.length][j].getEphemeral(minerKey));
+							publicData[j] = new CryptoDataArray(publicDataInner);
+						}
+						{
+							AdditiveElgamalCiphertext sum = (AdditiveElgamalCiphertext) AdditiveElgamalCiphertext.homomorphicSum(ciphertextSet1[(i + party) % in.length], minerKey);
+							CryptoData[] publicDataInner = new CryptoData[2];
+							publicDataInner[1] = new ECPointData(sum.getCipher(minerKey));
+							publicDataInner[0] = new ECPointData(sum.getEphemeral(minerKey));
+							publicData[in.length] = new CryptoDataArray(publicDataInner);
+						}
+						verifierData[0] = new CryptoDataArray(publicData);
+					}
+					if(!and.verifyFiatShamir(verifierData[0], ciphertextSet1Transcripts[(i + party) % in.length][0], ciphertextSet1Transcripts[(i + party) % in.length][1], verifierData[1])) {
+						System.out.println("FAILED PROOF.  I AM SAD.");
+					}
+				}
+
+			} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException
+					| ArraySizesDoNotMatchException e) {
+				// 
 				e.printStackTrace();
 			}
 		}
-		{
-			ByteArrayOutputStream out1 = new ByteArrayOutputStream();
-			try {
-				ObjectOutputStream out2 = new ObjectOutputStream(out1);
-				out2.writeObject(countedVotes);
-				out2.writeObject(tableOmega);
-				out2.writeObject(dummyInputsRandomized);
-				out2.writeObject(dummyInputsDecrypted);
-				out2.writeObject(passwordInputsRandomized);
-				out2.writeObject(passwordInputsDecrypted);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+		//Now to fudge the numbers:
+		//For now, we will hardcode the average of 30 d50s (0-49).  If the average is a fraction, use the fraction to probabilistically round
+		//For example, 2.9 has a 90 percent chance to round up and a 10% chance to round down, determined by a random number generator 0-1
+		//It will be (average of 30 d50) - 24
+		int numDice = 30;
+		int sides = 50;
+		int[] fudgeNumbers = new int[in.length];
+		BigInteger[] fudgedValues = new BigInteger[in.length];
+		try {
+			for(int i = 1; i < in.length; i++){
+				int sum = 0;
+				for(int j = 0; j < numDice; j++) {
+					sum += rand.nextInt(sides);
+				}
+				int average = sum / numDice;
+				double remainder = (sum % numDice)/(double)numDice;
+				double roll = rand.nextDouble();
+				if(roll <  remainder) average++;
+				fudgeNumbers[(i + party) % in.length] = average - (sides-1)/2;
+				fudgedValues[(i + party) % in.length] = values[(i + party) % in.length].add(BigInteger.valueOf(fudgeNumbers[(i + party) % in.length])).mod(curve.getOrder());
+				out[(i + party) % in.length].writeObject(fudgedValues[(i + party) % in.length]);
 			}
+			for(int i = 0; i < in.length; i++){
+				if(out[i] != null) out[i].flush();
+			}
+			BigInteger sum = values[party];
+			for(int i = in.length-1; i >= 1; i--){
+				sum = sum.add((BigInteger) in[(i + party) % in.length].readObject()).mod(curve.getOrder());
+			}
+			AdditiveElgamalCiphertext[] combinedCiphers = new AdditiveElgamalCiphertext[in.length];
+			AdditiveElgamalCiphertext inverseDummy = minerKey.encrypt(BigInteger.ONE, BigInteger.ZERO).homomorphicAdd(dummyFlag.negate(minerKey), minerKey);
+			for(int i = 0; i < in.length; i++) {
+				combinedCiphers[i] = ciphertextSet1[0][i];
+				for(int j = 1; j < in.length; j++) {
+					combinedCiphers[i] = combinedCiphers[i].homomorphicAdd(ciphertextSet1[j][i], minerKey);
+				}
+				combinedCiphers[i] = combinedCiphers[i].homomorphicAdd(inverseDummy, minerKey);
+			}
+			//start decrypting with next party first
+			AdditiveElgamalCiphertext current = combinedCiphers[(party+in.length-1) % in.length];
+			BigInteger[] proofEphemerals = new BigInteger[in.length];
+			for(int i = party-1; (i  + in.length) % in.length!= party; i--) {
+				proofEphemerals[(i + in.length) % in.length] = minerKey.generateEphemeral(rand);
+				current = minerPrivKey.decrypt(current);
+				out[(party+1)%in.length].writeObject(current);
+				out[(party+1)%in.length].flush();
+				current = (AdditiveElgamalCiphertext) in[(party + in.length - 1) % in.length].readObject();
+			}
+			current = minerPrivKey.decrypt(current);
+			ECPoint point = current.getCipher(minerKey);
+			ECPoint fudgePoint = g.multiply(sum);
+			BigInteger actualValue = sum;
+			if(!fudgePoint.equals(point))
+			{
+				ECPoint fudgePoint1 = fudgePoint;
+				ECPoint fudgePoint2 = fudgePoint;
+				int i = 0;
+				while(i < 1251) {
+					i++;
+					fudgePoint1 = fudgePoint1.add(g);
+					if(fudgePoint1.equals(point)) {
+						actualValue = actualValue.add(BigInteger.valueOf(i));
+						break;
+					}
+					fudgePoint2 = fudgePoint2.subtract(g);
+					if(fudgePoint2.equals(point)) {
+						actualValue = actualValue.add(BigInteger.valueOf(-i));
+						break;
+					}
+				}
+				if(i == 1251) {
+					System.out.println("AAAAAAAAAAA FUDGING FAILED :-(");
+				}
+			}
+			AdditiveEncryptedVote[] myVersion = new AdditiveEncryptedVote[voterVotes.length];
+			BigInteger[][] raceEphemerals = new BigInteger[voterVotes.length][];
+			for(int i = 0; i < voterVotes.length; i++) {
+				raceEphemerals[i] = election.getRace(i).generateRerandimizationValues(rand);
+				myVersion[i] = (AdditiveEncryptedVote) ((AdditiveEncryptedVote) voterVotes[i]).scalarMultiply(actualValue, election.getRace(i).getPubKey()).rerandomize(raceEphemerals[i], minerKey);
+
+			}
+
+			for(int i = 1; i < in.length; i++) {
+				out[(party+i)%in.length].writeObject(myVersion);
+			}
+			for(int i = 1; i < in.length; i++) {
+				out[(party+i)%in.length].flush();
+			}
+			for(int i = in.length-1; i >= 1; i--) {
+				AdditiveEncryptedVote[] otherVote = (AdditiveEncryptedVote[]) in[(party+i)%in.length].readObject();
+				for(int j = 0; j < myVersion.length; j++) {
+					myVersion[j] = myVersion[j].homomorphicAdd(otherVote[j], election.getRace(j).getPubKey());
+				}
+			}
+
+			//Parties now have plaintexts that match their ciphertexts.  Now prove that the alterations to voterVotes are legitimate.  Cooperative zero knowledge proof.
+			ArrayList<int[][]> struct = new ArrayList<int[][]>();
+			//g is 0, ephemeral portion of sum is 1, raceKey is 2. 
+			//x is 0, y is 1
+			int pubCounter = 2;
+			int secCounter = 2;
+			int envCounter = 3;
+			struct.add(new int[][] {{0,1}});
+			struct.add(new int[][] {{0, 0},{1, 1}});
+			for(int i = 0; i < voterVotes.length; i++) {
+				AdditiveCiphertext[] ciphertexts = ((AdditiveCiphertext[])voterVotes[i].getCiphertext());
+				for(int j = 0; j < ciphertexts.length; j++) {
+					struct.add(new int[][]{{envCounter, 0},{2, secCounter}});
+					struct.add(new int[][]{{envCounter+1, 0},{0, secCounter}});
+					envCounter += 2;
+					secCounter++;
+					pubCounter += 2;
+				}
+			}
+			AdditiveElgamalCiphertext totalCipher = combinedCiphers[0];
+			for(int i = 1; i < combinedCiphers.length; i++) {
+				totalCipher = totalCipher.homomorphicAdd(combinedCiphers[i], minerKey);
+			}
+			int[][][] structure = struct.toArray(new int[struct.size()][][]);
+			ZKPProtocol weirdProof = new ECSchnorrCombinations(structure);
+			CryptoData[] weirdProofProverData = new CryptoData[3];
+			{
+
+				CryptoData[] pubData = new CryptoData[pubCounter];
+				pubData[0] = new ECPointData(minerKey.getY());
+				pubData[1] = new ECPointData(totalCipher.getCipher(minerKey));
+				int counter = 2;
+				for(int i = 0; i < voterVotes.length; i++) {
+					Additive_Pub_Key raceKey = election.getRace(i).getPubKey();
+					AdditiveCiphertext[] ciphertexts = ((AdditiveCiphertext[])myVersion[i].getCiphertext());
+					for(int j = 0; j < ciphertexts.length; j++) {
+						pubData[counter+j*2] = new ECPointData(((AdditiveElgamalCiphertext)ciphertexts[j]).getCipher(raceKey));
+						pubData[counter+j*2+1] = new ECPointData(((AdditiveElgamalCiphertext)ciphertexts[j]).getEphemeral(raceKey));
+					}
+					counter += ciphertexts.length*2;
+				}
+				CryptoData[] secData = new CryptoData[secCounter*2];
+				secData[0] = new BigIntData(minerKey.generateEphemeral(rand));
+				secData[1] = new BigIntData(minerKey.generateEphemeral(rand));
+				secData[secCounter] = new BigIntData(actualValue);
+				secData[secCounter + 1] = new BigIntData(minerPrivKey.getPrivKey()[0]);
+				counter = 2;
+				for(int i = 0; i < voterVotes.length; i++) {
+					for(int j = 0; j < raceEphemerals[i].length; j++) {
+						secData[counter+j] = new BigIntData(minerKey.generateEphemeral(rand));
+						secData[secCounter+counter+j] = new BigIntData(raceEphemerals[i][j]);
+					}
+					counter += raceEphemerals[i].length;
+				}
+
+
+				CryptoData[] envData = new CryptoData[envCounter];
+				envData[0] = new ECCurveData(curve, g);
+				envData[1] = new ECPointData(totalCipher.getEphemeral(minerKey));
+				envData[2] = new ECPointData(minerKey.getY());
+				counter = 3;
+				for(int i = 0; i < voterVotes.length; i++) {
+					AdditiveCiphertext[] ciphertexts = ((AdditiveCiphertext[])voterVotes[i].getCiphertext());
+					Additive_Pub_Key raceKey = election.getRace(i).getPubKey();
+					for(int j = 0; j < ciphertexts.length; j++) {
+						envData[counter+2*j] = new ECPointData(((AdditiveElgamalCiphertext)ciphertexts[j]).getCipher(raceKey));
+						envData[counter+2*j+1] = new ECPointData(((AdditiveElgamalCiphertext)ciphertexts[j]).getEphemeral(raceKey));
+
+					}
+					counter += 2*ciphertexts.length;
+				}
+
+				weirdProofProverData[0] = new CryptoDataArray(pubData);
+				weirdProofProverData[1] = new CryptoDataArray(secData);
+				weirdProofProverData[2] = new CryptoDataArray(envData);
+				CryptoData[] unaltered = weirdProof.initialComm(weirdProofProverData[0], weirdProofProverData[1], weirdProofProverData[2]).getCryptoDataArray();
+				for(int i = 1; i < in.length; i++) {
+					out[(i+party)%in.length].writeObject(unaltered);
+				}
+				for(int i = 1; i < in.length; i++) {
+					out[(i+party)%in.length].flush();
+				}
+				for(int i = in.length-1; i >= 1; i--) {
+					CryptoData[] otherUnaltered = (CryptoData[]) in[(i+party)%in.length].readObject();
+					for(int j = 0; j < otherUnaltered.length; j++) {
+						unaltered[j] = new ECPointData(unaltered[j].getECPointData(curve).add(otherUnaltered[j].getECPointData(curve)));
+					}
+				}
+				CryptoData[] transcript = new CryptoData[2];
+				transcript[0] = new CryptoDataArray(unaltered);
+				BigInteger fiatChallenge = weirdProof.fiatShamirChallange(weirdProofProverData[0], transcript[0], weirdProofProverData[2]);
+				unaltered = weirdProof.calcResponse(weirdProofProverData[0], weirdProofProverData[1], fiatChallenge, weirdProofProverData[2]).getCryptoDataArray();
+
+				for(int i = 1; i < in.length; i++) {
+					out[(i+party)%in.length].writeObject(unaltered);
+				}
+				for(int i = 1; i < in.length; i++) {
+					out[(i+party)%in.length].flush();
+				}
+				for(int i = in.length-1; i >= 1; i--) {
+					CryptoData[] otherUnaltered = (CryptoData[]) in[(i+party)%in.length].readObject();
+					for(int j = 0; j < otherUnaltered.length; j++) {
+						unaltered[j] = new BigIntData((unaltered[j].getBigInt().add(otherUnaltered[j].getBigInt())).mod(curve.getOrder()));
+					}
+				}
+
+
+				transcript[1] = new CryptoDataArray(unaltered);
+				if(weirdProof.verifyFiatShamir(weirdProofProverData[0], transcript[0], transcript[1], weirdProofProverData[2])) {
+				} else {
+					System.out.println("NOOOOOOO FAILED PROOF");
+					if(weirdProof.verifyResponse(weirdProofProverData[0], transcript[0], transcript[1], fiatChallenge, weirdProofProverData[2])) {
+						System.out.println("bad challenge?");
+					}
+				}
+
+
+				for(int j = 0; j < myVersion.length; j++) {
+					Additive_Pub_Key raceKey = election.getRace(j).getPubKey();
+					myVersion[j] = myVersion[j].scalarMultiply(BigInteger.valueOf(in.length).modInverse(raceKey.getOrder()), raceKey);
+				}
+				longProofTranscript = transcript;
+				countedVotes = myVersion;
+			}
+			boolean debug = false;
+			if(debug) {
+				if(party == 0) {
+					System.out.println();
+					System.out.println("Checking ballot:");
+					System.out.println("Source was dummy?");
+				}
+				{
+					ECPoint blah = ((AdditiveElgamalCiphertext) origDummy2).getEphemeral(minerKey).multiply(minerPrivKey.getPrivKey()[0].negate());
+					AdditiveElgamalCiphertext decrypted = (AdditiveElgamalCiphertext) origDummy2;
+					for(int i = 1; i < in.length; i++) {
+						out[(i+party) % in.length].writeObject(blah.getEncoded(true));
+					}
+					decrypted = decrypted.homomorphicAdd(new AdditiveElgamalCiphertext(blah, curve.getInfinity()), minerKey);
+					for(int i = 1; i < in.length; i++) {
+						out[(i+party) % in.length].flush();
+					}
+					for(int i = in.length-1; i >= 1; i--) {
+						ECPoint blah2 = curve.decodePoint((byte[]) in[(i+party) % in.length].readObject());
+						decrypted = decrypted.homomorphicAdd(new AdditiveElgamalCiphertext(blah2, curve.getInfinity()), minerKey);
+					}
+					if(party == 0) {
+						if(g.equals(decrypted.getCipher(minerKey))) {
+							System.out.println("\tYes");
+						} else System.out.println("\tNo");
+					}
+				}
+				if(party == 0) {
+					System.out.println("Did passwords match?");
+				}
+				{
+					AdditiveElgamalCiphertext decrypted = ((AdditiveElgamalCiphertext) blindedPasswordOrigDecrypted.homomorphicAdd(blindedPasswordDiffDecrypted.negate(minerKey), minerKey));
+					ECPoint blah = decrypted.getEphemeral(minerKey).multiply(minerPrivKey.getPrivKey()[0].negate());
+					for(int i = 1; i < in.length; i++) {
+						out[(i+party) % in.length].writeObject(blah.getEncoded(true));
+					}
+					decrypted = decrypted.homomorphicAdd(new AdditiveElgamalCiphertext(blah, curve.getInfinity()), minerKey);
+					for(int i = 1; i < in.length; i++) {
+						out[(i+party) % in.length].flush();
+					}
+					for(int i = in.length-1; i >= 1; i--) {
+						ECPoint blah2 = curve.decodePoint((byte[]) in[(i+party) % in.length].readObject());
+						decrypted = decrypted.homomorphicAdd(new AdditiveElgamalCiphertext(blah2, curve.getInfinity()), minerKey);
+					}
+					if(party == 0) {
+						if(curve.getInfinity().equals(decrypted.getCipher(minerKey))) {
+							System.out.println("\tYes");
+						} else System.out.println("\tNo " + decrypted.getCipher(minerKey).normalize());
+					}
+				}
+				if(party == 0) {
+					System.out.println("Is result dummy?");
+				}
+				boolean isDummy = false;
+				{
+					AdditiveElgamalCiphertext decrypted = dummyFlag; 
+					ECPoint blah = ((AdditiveElgamalCiphertext) decrypted).getEphemeral(minerKey).multiply(minerPrivKey.getPrivKey()[0].negate());
+					for(int i = 1; i < in.length; i++) {
+						out[(i+party) % in.length].writeObject(blah.getEncoded(true));
+					}
+					decrypted = decrypted.homomorphicAdd(new AdditiveElgamalCiphertext(blah, curve.getInfinity()), minerKey);
+					for(int i = 1; i < in.length; i++) {
+						out[(i+party) % in.length].flush();
+					}
+					for(int i = in.length-1; i >= 1; i--) {
+						ECPoint blah2 = curve.decodePoint((byte[]) in[(i+party) % in.length].readObject());
+						decrypted = decrypted.homomorphicAdd(new AdditiveElgamalCiphertext(blah2, curve.getInfinity()), minerKey);
+					}
+					if(party == 0) {
+						if(g.equals(decrypted.getCipher(minerKey))) {
+							System.out.println("\tYes");
+							isDummy = true;
+						} else System.out.println("\tNo");
+					}
+				}
+
+				if(party == 0) {
+					System.out.println("What is CombinedCiphers?");
+				} 
+				{
+					AdditiveElgamalCiphertext decrypted = totalCipher;
+					ECPoint blah = decrypted.getEphemeral(minerKey).multiply(minerPrivKey.getPrivKey()[0].negate());
+					for(int i = 1; i < in.length; i++) {
+						out[(i+party) % in.length].writeObject(blah.getEncoded(true));
+					}
+					decrypted = decrypted.homomorphicAdd(new AdditiveElgamalCiphertext(blah, curve.getInfinity()), minerKey);
+					for(int i = 1; i < in.length; i++) {
+						out[(i+party) % in.length].flush();
+					}
+					for(int i = in.length-1; i >= 1; i--) {
+						ECPoint blah2 = curve.decodePoint((byte[]) in[(i+party) % in.length].readObject());
+						decrypted = decrypted.homomorphicAdd(new AdditiveElgamalCiphertext(blah2, curve.getInfinity()), minerKey);
+					}
+					if(party == 0) {
+						if(curve.getInfinity().equals(decrypted.getCipher(minerKey))) {
+							System.out.println("\tZero");
+						} else System.out.println("\tNo " + decrypted.getCipher(minerKey).normalize().equals(g.multiply(BigInteger.valueOf(in.length))));
+					}
+				}
+				if(party == 0) {
+					System.out.println("Do ciphers match?");
+				} 
+				{
+					boolean match = true;
+					for(int k = 0; k < countedVotes.length && match;k++){
+						AdditiveCiphertext[] origCiphertexts = (AdditiveCiphertext[]) voterVotes[k].getCiphertext();
+						AdditiveCiphertext[] finalCiphertexts = (AdditiveCiphertext[]) countedVotes[k].getCiphertext();
+						for(int j = 0; j < origCiphertexts.length; j++) {
+							AdditiveElgamalCiphertext cipher1 = (AdditiveElgamalCiphertext) origCiphertexts[j]; 
+							AdditiveElgamalCiphertext cipher2 = (AdditiveElgamalCiphertext) finalCiphertexts[j]; 
+							ECPoint blah = ((AdditiveElgamalCiphertext) cipher1).getEphemeral(minerKey).multiply(minerPrivKey.getPrivKey()[0].negate());
+							ECPoint blah2 = ((AdditiveElgamalCiphertext) cipher2).getEphemeral(minerKey).multiply(minerPrivKey.getPrivKey()[0].negate());
+							for(int i = 1; i < in.length; i++) {
+								out[(i+party) % in.length].writeObject(blah.getEncoded(true));
+								out[(i+party) % in.length].writeObject(blah2.getEncoded(true));
+							}
+							cipher1 = cipher1.homomorphicAdd(new AdditiveElgamalCiphertext(blah, curve.getInfinity()), minerKey);
+							cipher2 = cipher2.homomorphicAdd(new AdditiveElgamalCiphertext(blah2, curve.getInfinity()), minerKey);
+							for(int i = 1; i < in.length; i++) {
+								out[(i+party) % in.length].flush();
+							}
+							for(int i = in.length-1; i >= 1; i--) {
+								ECPoint blah3 = curve.decodePoint((byte[]) in[(i+party) % in.length].readObject());
+								ECPoint blah4 = curve.decodePoint((byte[]) in[(i+party) % in.length].readObject());
+								cipher1 = cipher1.homomorphicAdd(new AdditiveElgamalCiphertext(blah3, curve.getInfinity()), minerKey);
+								cipher2 = cipher2.homomorphicAdd(new AdditiveElgamalCiphertext(blah4, curve.getInfinity()), minerKey);
+							}
+							if(cipher2.getCipher(minerKey).equals(cipher1.getCipher(minerKey))) {
+							} else {
+								if(party == 0) {
+									if(isDummy) {
+										System.out.println("\tNo, good");
+									} else {
+										System.out.println("\tNo, bad");
+									}
+								}
+								match = false;
+								break;
+							}
+						}
+					}
+					if(match) {
+						if(isDummy) {
+							System.out.println("\tYes, bad");
+						} else {
+							System.out.println("\tYes, good");
+						}
+					}
+				}
+			}
+		} catch (IOException | ClassNotFoundException | MultipleTrueProofException | NoTrueProofException | ArraySizesDoNotMatchException e) {
+			e.printStackTrace();
 		}
+
+		//		{
+		//			ByteArrayOutputStream out1 = new ByteArrayOutputStream();
+		//			try {
+		//				ObjectOutputStream out2 = new ObjectOutputStream(out1);
+		//				out2.writeObject(this);
+		//			} catch (IOException e) {
+		//				e.printStackTrace();
+		//			}
+		//		}	
+
+		//		private CryptoData[][] dummyTableRandomizeTranscript;
+		//		private CryptoData[][] dummyTableDecryptTranscript;
+		//		private CryptoData[][] passwordTableRandomizeTranscript;
+		//		private ElectionTableRowInner[][] intermediatePasswordTables;
+		//		private CryptoData[][] passwordProofTranscripts;
+		//		private CryptoData[][] passwordTableDecryptTranscript;	
+		//		private ElectionTableRowInner[][] intermediateDummyTables;
+		//		private CryptoData[][] dummyProofTranscripts;
+
 		return true;
 	}
 
@@ -1921,7 +2562,7 @@ public class BallotTransaction4_1 implements BallotT {
 		CryptoData[] fullProofData = new CryptoData[2];
 		CryptoData[] fullProofPub = new CryptoData[2];
 		CryptoData[] fullProofEnv = new CryptoData[2];
-		
+
 		boolean hasOutput1 = (orig[0].output1 != null);
 		boolean hasOutput2 = (orig[0].output2 != null);
 		{//Build non-swap half of data
@@ -1953,7 +2594,7 @@ public class BallotTransaction4_1 implements BallotT {
 					inner2Pub[j] = new CryptoDataArray(innerPub[j]);
 					inner2Env[j] = new CryptoDataArray(innerEnv[j]);
 				}
-	
+
 				midPub[count] = new CryptoDataArray(inner2Pub);
 				midEnv[count] = new CryptoDataArray(inner2Env);
 				count++;
@@ -1977,14 +2618,14 @@ public class BallotTransaction4_1 implements BallotT {
 			if(hasOutput2) {
 				mid3[0] = originalTables[i][0].output2.getRerandomizationVerifierData(orig[0].output2, minerKey);
 				mid3[1] = originalTables[i][1].output2.getRerandomizationVerifierData(orig[1].output2, minerKey);
-				
+
 				CryptoData[] mid3Pub = new CryptoData[2];
 				mid3Pub[0] = mid3[0][0];
 				mid3Pub[1] = mid3[1][0];
 				CryptoData[] mid3Env = new CryptoData[2]; 
 				mid3Env[0] = mid3[0][1];
 				mid3Env[1] = mid3[1][1];
-	
+
 				midPub[count] = new CryptoDataArray(mid3Pub);
 				midEnv[count] = new CryptoDataArray(mid3Env);
 			}
@@ -2010,20 +2651,20 @@ public class BallotTransaction4_1 implements BallotT {
 				for(int j = 0; j < election.getNumRace(); j++) {
 					inner[0] = originalTables[i][0].output1[j].getVerificationDataRandomizationProof(orig[1].output1[j], election.getRace(j).getPubKey());
 					inner[1] = originalTables[i][1].output1[j].getVerificationDataRandomizationProof(orig[0].output1[j], election.getRace(j).getPubKey());
-	
+
 					innerPub[j][0] = inner[0][0];
 					innerEnv[j][0] = inner[0][1];
 					innerPub[j][1] = inner[1][0];
 					innerEnv[j][1] = inner[1][1];
 				}
-				
+
 				CryptoData[] inner2Pub = new CryptoData[election.getNumRace()];
 				CryptoData[] inner2Env = new CryptoData[election.getNumRace()];
 				for(int j = 0; j < inner2Pub.length; j++) {
 					inner2Pub[j] = new CryptoDataArray(innerPub[j]);
 					inner2Env[j] = new CryptoDataArray(innerEnv[j]);
 				}
-	
+
 				midPub[count] = new CryptoDataArray(inner2Pub);
 				midEnv[count] = new CryptoDataArray(inner2Env);
 				count++;
@@ -2042,19 +2683,19 @@ public class BallotTransaction4_1 implements BallotT {
 
 			midPub[0] = new CryptoDataArray(mid2Pub);
 			midEnv[0] = new CryptoDataArray(mid2Env);
-			
+
 			if(hasOutput2) {
 				CryptoData[][] mid3 = new CryptoData[2][]; 
 				mid3[0] = originalTables[i][0].output2.getRerandomizationVerifierData(orig[1].output2, minerKey);
 				mid3[1] = originalTables[i][1].output2.getRerandomizationVerifierData(orig[0].output2, minerKey);
-				
+
 				CryptoData[] mid3Pub = new CryptoData[2];
 				mid3Pub[0] = mid3[0][0];
 				mid3Pub[1] = mid3[1][0];
 				CryptoData[] mid3Env = new CryptoData[2]; 
 				mid3Env[0] = mid3[0][1];
 				mid3Env[1] = mid3[1][1];
-	
+
 				midPub[count] = new CryptoDataArray(mid3Pub);
 				midEnv[count] = new CryptoDataArray(mid3Env);
 			}
@@ -2076,10 +2717,10 @@ public class BallotTransaction4_1 implements BallotT {
 		CryptoData[] fullProofPub = new CryptoData[2];
 		CryptoData[] fullProofSec = new CryptoData[3];
 		CryptoData[] fullProofEnv = new CryptoData[2];
-		
+
 
 		boolean hasOutput2 = (orig[0].output2 != null);
-		
+
 		{//Build non-swap half of data
 			CryptoData[] midSec;
 			CryptoData[] midPub;
@@ -2131,7 +2772,7 @@ public class BallotTransaction4_1 implements BallotT {
 					inner2Sec[j] = new CryptoDataArray(innerSec[j]);
 					inner2Env[j] = new CryptoDataArray(innerEnv[j]);
 				}
-	
+
 				midPub[count] = new CryptoDataArray(inner2Pub);
 				midSec[count] = new CryptoDataArray(inner2Sec);
 				midEnv[count] = new CryptoDataArray(inner2Env);
@@ -2160,9 +2801,9 @@ public class BallotTransaction4_1 implements BallotT {
 			midPub[0] = new CryptoDataArray(mid2Pub);
 			midSec[0] = new CryptoDataArray(mid2Sec);
 			midEnv[0] = new CryptoDataArray(mid2Env);
-			
+
 			if(hasOutput2) {
-			CryptoData[][] mid3 = new CryptoData[2][]; 
+				CryptoData[][] mid3 = new CryptoData[2][]; 
 				if(swap) {
 					mid3[0] = sourceTable[i][0].output2.getRerandomizationProverData(orig[0].output2, null, rand, minerKey);
 					mid3[1] = sourceTable[i][1].output2.getRerandomizationProverData(orig[1].output2, null, rand, minerKey);
@@ -2170,7 +2811,7 @@ public class BallotTransaction4_1 implements BallotT {
 					mid3[0] = sourceTable[i][0].output2.getRerandomizationProverData(orig[0].output2, outputCipherRerandmize[0], rand, minerKey);
 					mid3[1] = sourceTable[i][1].output2.getRerandomizationProverData(orig[1].output2, outputCipherRerandmize[1], rand, minerKey);
 				}
-				
+
 				CryptoData[] mid3Pub = new CryptoData[2];
 				mid3Pub[0] = mid3[0][0];
 				mid3Pub[1] = mid3[1][0];
@@ -2185,7 +2826,7 @@ public class BallotTransaction4_1 implements BallotT {
 				midSec[count] = new CryptoDataArray(mid3Sec);
 				midEnv[count] = new CryptoDataArray(mid3Env);
 			}
-			
+
 			fullProofPub[0] = new CryptoDataArray(midPub);
 			fullProofSec[0] = new CryptoDataArray(midSec);
 			fullProofEnv[0] = new CryptoDataArray(midEnv);
@@ -2219,13 +2860,13 @@ public class BallotTransaction4_1 implements BallotT {
 						innerPub[j][1] = inner[1][0];
 						innerSec[j][1] = inner[1][1];
 						innerEnv[j][1] = inner[1][2];
-	
+
 					}
 				} else {
 					for(int j = 0; j < election.getNumRace(); j++) {
 						inner[0] = sourceTable[i][0].output1[j].getProverDataRandomizationProof(orig[1].output1[j], null, election.getRace(j).getPubKey(), rand);
 						inner[1] = sourceTable[i][1].output1[j].getProverDataRandomizationProof(orig[0].output1[j], null, election.getRace(j).getPubKey(), rand);
-	
+
 						innerPub[j][0] = inner[0][0];
 						innerSec[j][0] = inner[0][1];
 						innerEnv[j][0] = inner[0][2];
@@ -2242,7 +2883,7 @@ public class BallotTransaction4_1 implements BallotT {
 					inner2Sec[j] = new CryptoDataArray(innerSec[j]);
 					inner2Env[j] = new CryptoDataArray(innerEnv[j]);
 				}
-	
+
 				midPub[count] = new CryptoDataArray(inner2Pub);
 				midSec[count] = new CryptoDataArray(inner2Sec);
 				midEnv[count] = new CryptoDataArray(inner2Env);
@@ -2279,7 +2920,7 @@ public class BallotTransaction4_1 implements BallotT {
 					mid3[0] = sourceTable[i][0].output2.getRerandomizationProverData(orig[1].output2, null, rand, minerKey);
 					mid3[1] = sourceTable[i][1].output2.getRerandomizationProverData(orig[0].output2, null, rand, minerKey);
 				}
-				
+
 				CryptoData[] mid3Pub = new CryptoData[2];
 				mid3Pub[0] = mid3[0][0];
 				mid3Pub[1] = mid3[1][0];
@@ -2289,7 +2930,7 @@ public class BallotTransaction4_1 implements BallotT {
 				CryptoData[] mid3Env = new CryptoData[2]; 
 				mid3Env[0] = mid3[0][2];
 				mid3Env[1] = mid3[1][2];
-	
+
 				midPub[count] = new CryptoDataArray(mid3Pub);
 				midSec[count] = new CryptoDataArray(mid3Sec);
 				midEnv[count] = new CryptoDataArray(mid3Env);
@@ -2330,7 +2971,7 @@ public class BallotTransaction4_1 implements BallotT {
 		//		ParallelVerifier[] verifierObs = new ParallelVerifier[in.length];
 		table2s[order[order.length-1]] = table1;
 		for(int i = 0; i < in.length; i++) {
-
+			//ysshuffleif(in[0] == null) System.out.print((char)('a' + i%26));
 			int index = order[i];
 			int prev;
 			if(i == 0) {
@@ -2339,7 +2980,7 @@ public class BallotTransaction4_1 implements BallotT {
 				prev = order[i-1];
 			}
 			if(in[index] == null) {
-//				System.out.println("My turn:  " + index);
+				//				System.out.println("My turn:  " + index);
 				int[] shuffle = new int[rows];
 				for(int k = 0; k < rows; k++) {
 					shuffle[k] = k;
@@ -2358,37 +2999,46 @@ public class BallotTransaction4_1 implements BallotT {
 						table2s[index][k][k2] = table2s[prev][shuffle[k]][k2].rerandomize(ephemerals[k][k2], minerKey);
 					}
 				}
-//				//				System.out.println(java.util.Arrays.toString(shuffle));
-//				CryptoData[] proverData = getInternalShuffleProverData(table2s[index], table2s[prev], ephemerals, shuffle, minerKey, rand);
-//				CryptoData[] proofTranscript = null;
-//				try {
-//					proofTranscript = proof1.proveFiatShamir(proverData[0], proverData[1], proverData[2]);
-//					//					CryptoData[] verifierData = getInternalShuffleVerifierData(table2s[index], table2s[prev], minerKey);
-//					//					if(verifierData[0].equals(proverData[0])) System.out.println("equal 1");
-//					//					else {
-//					//						System.out.println("not equal 1");
-//					//						System.out.println("v = " + verifierData[0]);
-//					//						System.out.println("p = " + proverData[0]);
-//					//					}
-//					//					
-//					//					if(verifierData[1].equals(proverData[2])) System.out.println("equal 2");
-//					//					else System.out.println("not equal 2");
-//					//					System.out.println(proof1.verifyFiatShamir(proverData[0], proofTranscript[0], proofTranscript[1], proverData[2]));
-//					//					System.out.println(proof1.verifyFiatShamir(verifierData[0], proofTranscript[0], proofTranscript[1], verifierData[1]));
-//				} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException
-//						| ArraySizesDoNotMatchException e1) {
-//					// TODO Auto-generated catch block
-//					e1.printStackTrace();
-//				}
+				//				System.out.println(java.util.Arrays.toString(shuffle));
+				CryptoData[] proverData = getInternalShuffleProverData(table2s[index], table2s[prev], ephemerals, shuffle, minerKey, rand);
+				CryptoData[] proofTranscript = null;
+				try {
+					proofTranscript = proof1.proveFiatShamir(proverData[0], proverData[1], proverData[2]);
+					//					CryptoData[] verifierData = getInternalShuffleVerifierData(table2s[index], table2s[prev], minerKey);
+					//					if(verifierData[0].equals(proverData[0])) System.out.println("equal 1");
+					//					else {
+					//						System.out.println("not equal 1");
+					//						System.out.println("v = " + verifierData[0]);
+					//						System.out.println("p = " + proverData[0]);
+					//					}
+					//					
+					//					if(verifierData[1].equals(proverData[2])) System.out.println("equal 2");
+					//					else System.out.println("not equal 2");
+					//					System.out.println(proof1.verifyFiatShamir(proverData[0], proofTranscript[0], proofTranscript[1], proverData[2]));
+					//					System.out.println(proof1.verifyFiatShamir(verifierData[0], proofTranscript[0], proofTranscript[1], verifierData[1]));
+				} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException
+						| ArraySizesDoNotMatchException e1) {
+					// 
+					e1.printStackTrace();
+				}
 				for(int k = 0; k < out.length; k++) {
 					if(out[k] == null) continue;
 					try {
 						//						System.out.println(Thread.currentThread() + " writing to " + k);
 						out[k].writeObject(table2s[index]);
-						out[k].flush();
-//						out[k].writeObject(proofTranscript);
+						out[k].writeObject(proofTranscript);
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
+						// 
+						e.printStackTrace();
+					}
+				}
+				for(int k = 0; k < out.length; k++) {
+
+					if(out[k] == null) continue;
+					try {
+						out[k].flush();
+					} catch (IOException e) {
+						// 
 						e.printStackTrace();
 					}
 				}
@@ -2396,23 +3046,23 @@ public class BallotTransaction4_1 implements BallotT {
 				try {
 					//					System.out.println(Thread.currentThread().toString() + " is waiting for " + i + " from " + index);
 					table2s[index] = (AdditiveCiphertext[][]) in[index].readObject();
-//					CryptoData[] transcript = (CryptoData[]) in[index].readObject();
+					CryptoData[] transcript = (CryptoData[]) in[index].readObject();
 
-//					CryptoData[] verifierInputs = getInternalShuffleVerifierData(table2s[index], table2s[prev], minerKey);
+					CryptoData[] verifierInputs = getInternalShuffleVerifierData(table2s[index], table2s[prev], minerKey);
 					//					System.out.println(Thread.currentThread().toString() + " has received " + i);
 
 					//					verifiers[index] = new Thread(verifierObs[index] = new ParallelVerifier(proof1, transcript, verifierInputs));
 					//					verifiers[index].setPriority(1);
 					//					verifiers[index].start();
 
-//					try {
-//						if(!proof1.verifyFiatShamir(verifierInputs[0], transcript[0], transcript[1], verifierInputs[1])) {
-//							return null;
-//						}
-//					} catch (MultipleTrueProofException | NoTrueProofException | ArraySizesDoNotMatchException e) {
-//						// TODO Auto-generated catch block
-//						e.printStackTrace();
-//					}
+					try {
+						if(!proof1.verifyFiatShamir(verifierInputs[0], transcript[0], transcript[1], verifierInputs[1])) {
+							return null;
+						}
+					} catch (MultipleTrueProofException | NoTrueProofException | ArraySizesDoNotMatchException e) {
+						// 
+						e.printStackTrace();
+					}
 					//					
 				} catch (ClassNotFoundException | IOException e) {
 					e.printStackTrace();
@@ -2424,7 +3074,7 @@ public class BallotTransaction4_1 implements BallotT {
 		//			try {
 		//				verifiers[i].join();
 		//			} catch (InterruptedException e) {
-		//				// TODO Auto-generated catch block
+		//				// 
 		//				e.printStackTrace();
 		//			}
 		//			System.out.println(verifierObs[i].isVerified());
@@ -2450,12 +3100,12 @@ public class BallotTransaction4_1 implements BallotT {
 
 		@Override
 		public void run() {
-			// TODO Auto-generated method stub
+			// 
 			try {
 				verified = p.verifyFiatShamir(verifierInputs[0], transcript[0], transcript[1], verifierInputs[1]);
 			} catch (ClassNotFoundException | IOException | MultipleTrueProofException | NoTrueProofException
 					| ArraySizesDoNotMatchException e) {
-				// TODO Auto-generated catch block
+				// 
 				e.printStackTrace();
 			}
 		}	
@@ -2596,12 +3246,12 @@ public class BallotTransaction4_1 implements BallotT {
 					CryptoData[][] transcripts = new CryptoData[numBits][];
 					for(int j = 0; j < numBits; j++) {
 						BigInteger bit = new BigInteger(1, rand);
-//						System.out.printf("fhdsaighfdjkhgj %d, %d, %s\n",order[i], j, bit);
-//						System.out.flush();
+						//						System.out.printf("fhdsaighfdjkhgj %d, %d, %s\n",order[i], j, bit);
+						//						System.out.flush();
 						BigInteger ephemeral = minerKey.generateEphemeral(rand);
 						AdditiveElgamalCiphertext addedPortion = toReturn[j].scalarMultiply(BigInteger.TWO.negate(), minerKey).scalarMultiply(bit, minerKey).homomorphicAdd(minerKey.encrypt(bit, ephemeral), minerKey);
 						newToReturn[j] = toReturn[j].homomorphicAdd(addedPortion, minerKey);
-						
+
 						CryptoData[] pubInput = new CryptoData[2];
 						AdditiveElgamalCiphertext addedPortionIfOne = toReturn[j].scalarMultiply(BigInteger.TWO.negate(), minerKey).scalarAdd(BigInteger.ONE, minerKey);
 						AdditiveElgamalCiphertext remainder0 = newToReturn[j].homomorphicAdd(toReturn[j].negate(minerKey), minerKey);
@@ -2623,20 +3273,20 @@ public class BallotTransaction4_1 implements BallotT {
 						try {
 							transcripts[j] = proof.proveFiatShamir(new CryptoDataArray(pubInput), new CryptoDataArray(secInput), env);
 						} catch (MultipleTrueProofException | NoTrueProofException | ArraySizesDoNotMatchException e) {
-							// TODO Auto-generated catch block
+							// 
 							e.printStackTrace();
 						}
-						
+
 						try {
 							if(proof.verifyFiatShamir(new CryptoDataArray(pubInput), transcripts[j][0], transcripts[j][1], env)) {
-								
+
 							} else System.out.println("Fail 24361532");
 						} catch (MultipleTrueProofException | NoTrueProofException | ArraySizesDoNotMatchException e) {
-							// TODO Auto-generated catch block
+							// 
 							e.printStackTrace();
 						}
 					}
-					
+
 					for(int j = 0; j < in.length; j++) {
 						if(out[order[j]] != null) {
 							out[order[j]].writeObject(newToReturn);
@@ -2651,7 +3301,7 @@ public class BallotTransaction4_1 implements BallotT {
 					for(int j = 0; j < numBits; j++) {
 						AdditiveElgamalCiphertext addedPortion = newToReturn[j].homomorphicAdd(toReturn[j].negate(minerKey), minerKey);//toReturn[j].scalarMultiply(BigInteger.TWO.negate(), minerKey).scalarMultiply(bit, minerKey).homomorphicAdd(minerKey.encrypt(bit, ephemeral), minerKey);
 						newToReturn[j] = toReturn[j].homomorphicAdd(addedPortion, minerKey);
-						
+
 						CryptoData[] pubInput = new CryptoData[2];
 						AdditiveElgamalCiphertext addedPortionIfOne = toReturn[j].scalarMultiply(BigInteger.TWO.negate(), minerKey).scalarAdd(BigInteger.ONE, minerKey);
 
@@ -2662,10 +3312,9 @@ public class BallotTransaction4_1 implements BallotT {
 						pubInput[1] = new CryptoDataArray(new CryptoData[] {new ECPointData(remainder1.getCipher(minerKey)), new ECPointData(remainder1.getEphemeral(minerKey))});
 						try {
 							if(proof.verifyFiatShamir(new CryptoDataArray(pubInput), transcripts[j][0], transcripts[j][1], env)) {
-								
+
 							} else System.out.println("Fail ghfdkjshg");
 						} catch (MultipleTrueProofException | NoTrueProofException | ArraySizesDoNotMatchException e) {
-							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
 					}
@@ -2673,21 +3322,16 @@ public class BallotTransaction4_1 implements BallotT {
 				}
 			}
 		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
-		
+
+
 		return toReturn;
 	}
-
 	@Override
 	public int getNumPasswords() {
-		// TODO Auto-generated method stub
-		return 1;
+		return password.length;
 	}
-
 }

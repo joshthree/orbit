@@ -6,7 +6,8 @@ import blah.AdditiveCiphertext;
 import blah.Additive_Pub_Key;
 
 public interface VoterTransaction extends Transaction {
-	AdditiveCiphertext getPasswordCiphertext();
+	AdditiveCiphertext getPasswordCiphertext(int index);
+	int getNumPasswords();
 	AdditiveCiphertext getDummyFlag();
 	
 	

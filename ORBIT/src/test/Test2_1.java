@@ -33,11 +33,14 @@ import election.Race;
 import election.VoterDecision;
 import election.singleCipherSVHNw.SVHNwRace;
 import election.singleCipherSVHNw.SVHNwVoterDecision;
+import transactions.BallotT;
 import transactions.BallotTransaction;
+import transactions.BallotTransaction6;
 import transactions.ElectionTransaction;
 import transactions.ProcessedBlockchain;
 import transactions.RegistrationTransaction;
 import transactions.SourceTransaction;
+import transactions.SpoilTransaction;
 
 public class Test2_1 {
 	public static void main2(String arg[]) {
@@ -87,7 +90,7 @@ public class Test2_1 {
 		
 		EncryptedVote[][] encryptedVotes = new EncryptedVote[numVotes][];
 		
-		long start0 = System.currentTimeMillis();
+		long start0 = System.nanoTime();
 		
 		VoterDecision[][] voterDecisions = new VoterDecision[numVotes][numRaces];
 		for (int i = 0; i < numVotes; i++) {
@@ -110,34 +113,35 @@ public class Test2_1 {
 			
 		}
 		
-		long start1 = System.currentTimeMillis();
-		
+		long end0 = System.nanoTime();
 		ByteArrayOutputStream out1 = new ByteArrayOutputStream();
 		try {
 			ObjectOutput out2 = new ObjectOutputStream(out1);
 			out2.writeObject(encryptedVotes);
-			System.out.printf("%d, ", out1.toByteArray().length);
+			System.out.printf("%d, ", out1.toByteArray().length);  //Initial Votes size (pre-transaction, pre-proof)
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
+		long start1 = System.nanoTime();
 
 		for (int i = 0; i < numVotes; i++) {
 			encryptedVotes[i] = election.proveVote(encryptedVotes[i], voterDecisions[i], rand);
 		}
 		
-		long start2 = System.currentTimeMillis();
+		long end1 = System.nanoTime();
 		
 		out1 = new ByteArrayOutputStream();
 		try {
 			ObjectOutput out2 = new ObjectOutputStream(out1);
 			out2.writeObject(encryptedVotes);
-			System.out.printf("%d, ", out1.toByteArray().length);
+			System.out.printf("%d, ", out1.toByteArray().length); //Initial Votes size (pre-transaction, with proof)
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
-		
+
+		long start2 = System.nanoTime();
 		boolean verified = true;
 		
 		for (int i = 0; i < numVotes; i++) {
@@ -152,7 +156,7 @@ public class Test2_1 {
 //			System.out.println("All good");
 //		}
 		
-		long start3 = System.currentTimeMillis();
+		long end2 = System.nanoTime();
 		
 //		for (int i = 0; i < numRaces; i++) {
 //			for (int j = 0; j < numCandidates; j++) {
@@ -160,22 +164,26 @@ public class Test2_1 {
 //			}
 //			System.out.println();
 //		}
-		System.out.printf("%d, %d, %d, ", start1-start0, start2-start1, start3-start2);
+		System.out.printf("%d, %d, %d, ", end0-start0, end1-start1, end2-start2);  //time to vote, time to prove votes, time to verify votes. 
 		ProcessedBlockchain blockchain = new ProcessedBlockchain();
-		BallotTransaction[] ballots = Test2_1.createTransactions(election, encryptedVotes, blockchain, ringSize, rand);
+		long start3 = System.nanoTime();
+		BallotT[] ballots = Test2_1.createTransactions(election, encryptedVotes, blockchain, ringSize, rand);
+		long end3 = System.nanoTime();
 
-		long start4 = System.currentTimeMillis();
 		
 		out1 = new ByteArrayOutputStream();
 		try {
 			ObjectOutput out2 = new ObjectOutputStream(out1);
 			out2.writeObject(ballots);
-			System.out.printf("%d, ", out1.toByteArray().length);
+			System.out.printf("%d, ", out1.toByteArray().length);  //Size of ballots,
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
-		System.out.printf("%d \n", start4-start3);
+		System.out.printf("%d \n", end3-start3);  //time to create transactions,
+		
+		
+		
 //		ObjectInputStream[][] in = new ObjectInputStream[miners][miners];
 //		ObjectOutputStream[][] out = new ObjectOutputStream[miners][miners];
 //		AdditiveElgamalPubKey[] individualMinerKeys = new AdditiveElgamalPubKey[minerPrivKeys.length];
@@ -269,34 +277,50 @@ public class Test2_1 {
 //			}
 //		}
 	}
-	public static BallotTransaction[] createTransactions(Election election, EncryptedVote[][] encryptedVotes, ProcessedBlockchain blockchain, int ringSize, SecureRandom rand) {
+	public static BallotT[] createTransactions(Election election, EncryptedVote[][] encryptedVotes, ProcessedBlockchain blockchain, int ringSize, SecureRandom rand) {
 		ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("secp256k1");
 		ECCurve curve = spec.getCurve();
 		ECPoint g = spec.getG();
 		BigInteger order = curve.getOrder();
 
+		int passwordNum = 5;
 		int numReg = Math.max(encryptedVotes.length, ringSize);
 		AdditiveElgamalPrivKey[][] voterPriv = new AdditiveElgamalPrivKey[numReg][2];
-		BigInteger[][] passwords = new BigInteger[numReg][3];
-		AdditiveElgamalCiphertext[] passwordCiphers = new AdditiveElgamalCiphertext[numReg];
+		BigInteger[][][] passwords = new BigInteger[numReg][3][];
+		AdditiveElgamalCiphertext[][] passwordCiphers = new AdditiveElgamalCiphertext[numReg][5];
 		
-		RegistrationTransaction[] registration = new RegistrationTransaction[numReg];
+		SourceTransaction[] registration = new SourceTransaction[numReg];
 		
 		ElectionTransaction electionTx = new ElectionTransaction(election);
 		blockchain.addTransaction(electionTx);
+		AdditiveElgamalPubKey minerKey = election.getMinerKey();
 		for(int i = 0; i < encryptedVotes.length || i < ringSize; i++) {
 			voterPriv[i][0] = new AdditiveElgamalPrivKey(g, rand);
 			voterPriv[i][1] = new AdditiveElgamalPrivKey(g, rand);
 
-			passwords[i][0] = election.getMinerKey().generateEphemeral(rand);
-			do {
-				passwords[i][1] = election.getMinerKey().generateEphemeral(rand);
-				
-			} while(passwords[i][1].equals(BigInteger.ZERO));
-			passwords[i][2] = election.getMinerKey().generateEphemeral(rand);
+			passwords[i][0] = new BigInteger[passwordNum];
+			passwords[i][1] = new BigInteger[1];
+			passwords[i][2] = new BigInteger[1];
 			
-			passwordCiphers[i] = (AdditiveElgamalCiphertext) election.getMinerKey().combineKeys(voterPriv[i][0].getPubKey()).encrypt(passwords[i][0], rand);
-			registration[i] = new RegistrationTransaction((AdditiveElgamalPubKey) voterPriv[i][0].getPubKey(), passwordCiphers[i], rand);
+			for (int j = 0; j < passwordNum; j++) {
+				passwords[i][0][j] = election.getMinerKey().generateEphemeral(rand);
+				passwordCiphers[i][j] = (AdditiveElgamalCiphertext) election.getMinerKey().combineKeys(voterPriv[i][0].getPubKey()).encrypt(passwords[i][0][j], rand);
+			}
+			do {
+				passwords[i][1][0] = election.getMinerKey().generateEphemeral(rand);
+				
+			} while(passwords[i][1][0].equals(BigInteger.ZERO));
+			passwords[i][2][0] = election.getMinerKey().generateEphemeral(rand);
+			if(i%2 == 0) {
+				if(i%4 == 0) {
+					registration[i] = new SpoilTransaction(voterPriv[i][0], passwordCiphers[i], minerKey.encrypt(BigInteger.ZERO, rand), null, rand);
+				}
+				else {
+					registration[i] = new RegistrationTransaction((AdditiveElgamalPubKey) voterPriv[i][0].getPubKey(), passwordCiphers[i], rand);
+				}
+			} else {
+				registration[i] = new SpoilTransaction(voterPriv[i][0], passwordCiphers[i], minerKey.encrypt(BigInteger.ONE, rand), null, rand);
+			}
 			blockchain.addTransaction(registration[i]);
 		}
 		
@@ -304,9 +328,9 @@ public class Test2_1 {
 
 		
 		
-		BallotTransaction[] ballots = new BallotTransaction[encryptedVotes.length];
+		BallotT[] ballots = new BallotT[encryptedVotes.length];
 
-		long time3 = System.currentTimeMillis();
+		long time3 = System.nanoTime();
 		HashMap<Integer, Boolean> map = new HashMap<Integer, Boolean>();
 		for(int i = 0; i < encryptedVotes.length; i++) {
 			int sourcePos = rand.nextInt(ringSize);
@@ -323,8 +347,11 @@ public class Test2_1 {
 				ring[j] = registration[mixin];
 			}
 			map.clear();
-			ballots[i] = new BallotTransaction(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
-
+			if((i%4/2) == 0) {
+				ballots[i] = new BallotTransaction6(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0][0], passwords[i][1][0], electionTx, encryptedVotes[i], passwords[i][2][0], rand);
+			} else {
+				ballots[i] = new BallotTransaction6(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], minerKey.generateEphemeral(rand), passwords[i][1][0], electionTx, encryptedVotes[i], passwords[i][2][0], rand);
+			}
 		}
 //		int last = encryptedVotes.length;
 //		int sourcePos = rand.nextInt(ringSize);
@@ -346,7 +373,7 @@ public class Test2_1 {
 		
 
 		
-		long time4 = System.currentTimeMillis();
+		long time4 = System.nanoTime();
 		for(int i = 0; i < ballots.length; i++) {
 			if(!ballots[i].verifyTransaction(blockchain))
 			{
@@ -355,8 +382,8 @@ public class Test2_1 {
 		}
 
 
-		long time5 = System.currentTimeMillis();
-		System.out.printf("%d, %d, ", time4 - time3, time5 - time4);
+		long time5 = System.nanoTime();
+		System.out.printf("%d, %d, ", time4 - time3, time5 - time4);  //Time to create ballot, time to verify ballot (including verifying voterVotes again).
 		return ballots;
 	}
 }

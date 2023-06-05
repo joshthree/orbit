@@ -135,6 +135,7 @@ public class MinerThread implements Runnable {
 				}
 
 				BallotT vote = (BallotT)ballotIn.readUnshared();
+				
 				if(leader) System.out.print(i + " ");
 				
 				long startCpuTime = threadTracker.getCurrentThreadCpuTime();

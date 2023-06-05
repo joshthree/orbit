@@ -128,7 +128,7 @@ public class ZeroKnowledgeAndProver extends ZKPProtocol {
 				{
 					System.out.println(Thread.currentThread() +  " AND failed on proof " + i);
 					System.out.println(p[i]);
-					return false;
+					toReturn = false;
 				}
 			}catch(NullPointerException e) {
 				System.out.println(p[i]);
@@ -195,21 +195,26 @@ public class ZeroKnowledgeAndProver extends ZKPProtocol {
 		CryptoData[] s = secrets.getCryptoDataArray();
 		CryptoData[] e = environment.getCryptoDataArray();
 		CryptoData[] out = new CryptoData[p.length];
-		try{
-			for(int i = 0; i < p.length; i++)
-			{
+		for(int i = 0; i < p.length; i++)
+		{
+			try{
 				if(in[i] == null)
 					out[i] = null;
 				else 
 					out[i] = p[i].initialCommSim(in[i], s[i], challenge, e[i]);
+			} catch (Exception ex) {
+				ex.printStackTrace();
+				System.out.println("Excption in And:  qwerygkjahdsgahdsmvz");
+				System.out.println(in.length);
+				System.out.println(p.length);
+				System.out.println("i = " + i);
+				System.out.println(publicInput);
+				System.out.println(secrets);
+				System.out.println(environment);
+				throw ex;
 			}
-		} catch (Exception ex) {
-			System.out.println("qwerygkjahdsgahdsm,vz");
-			System.out.println(in.length);
-			System.out.println(p.length);
-			throw ex;
 		}
-		
+
 		return new CryptoDataArray(out);
 	}
 	@Override

@@ -13,19 +13,19 @@ public class RegistrationTransaction implements SourceTransaction{
 	 */
 	private static final long serialVersionUID = -7612729355568619624L;
 	private AdditiveElgamalPubKey voterKey;
-	private AdditiveElgamalCiphertext password;
+	private AdditiveElgamalCiphertext[] password;
 	private AdditiveElgamalCiphertext dummyFlag;
 	private long position = -1;
 
-	public RegistrationTransaction(AdditiveElgamalPubKey voterKey, AdditiveElgamalCiphertext password, SecureRandom rand) {
+	public RegistrationTransaction(AdditiveElgamalPubKey voterKey, AdditiveElgamalCiphertext[] password, SecureRandom rand) {
 		this.voterKey = voterKey;
 		dummyFlag = (AdditiveElgamalCiphertext) voterKey.encrypt(BigInteger.ZERO, BigInteger.ZERO);
 		this.password = password;
 	}
 	
 	@Override
-	public AdditiveElgamalCiphertext getPasswordCiphertext() {
-		return password;
+	public AdditiveElgamalCiphertext getPasswordCiphertext(int index) {
+		return password[index];
 	}
 
 	@Override
@@ -60,6 +60,11 @@ public class RegistrationTransaction implements SourceTransaction{
 	@Override
 	public byte[] getBytes() {
 		return ByteBuffer.wrap(new byte[8]).putLong(position).array();
+	}
+
+	@Override
+	public int getNumPasswords() {
+		return password.length;
 	}
 
 }

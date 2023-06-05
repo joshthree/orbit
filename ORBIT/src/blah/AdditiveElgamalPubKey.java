@@ -300,6 +300,11 @@ public class AdditiveElgamalPubKey implements Additive_Pub_Key {
 		}
 		return out1.toByteArray();
 	}
-
+	@Override
+	public boolean isSharable() {
+		// TODO Auto-generated method stub
+		return true;
+	}
+	
 
 }

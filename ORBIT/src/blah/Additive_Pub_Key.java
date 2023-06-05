@@ -26,4 +26,6 @@ public interface Additive_Pub_Key extends Pub_Key {
 	
 	Additive_Pub_Key combineKeys(Additive_Pub_Key otherKey);
 	Additive_Pub_Key removeKey(Additive_Pub_Key otherKey);
+	
+	boolean isSharable();
 }

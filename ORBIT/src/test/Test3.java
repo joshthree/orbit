@@ -42,6 +42,7 @@ import transactions.BallotTransaction4;
 import transactions.BallotTransaction4_1;
 import transactions.BallotTransaction5;
 import transactions.BallotTransaction5_1;
+import transactions.BallotTransaction6;
 import transactions.ElectionTransaction;
 import transactions.ProcessedBlockchain;
 import transactions.RegistrationTransaction;
@@ -245,11 +246,13 @@ public class Test3 {
 		ECPoint g = spec.getG();
 		BigInteger order = curve.getOrder();
 		
+		int passwordNum = 5;
 		AdditiveElgamalPubKey minerKey = election.getMinerKey();
 		int numReg = Math.max(encryptedVotes.length, ringSize*2);
 		AdditiveElgamalPrivKey[][] voterPriv = new AdditiveElgamalPrivKey[numReg][2];
-		BigInteger[][] passwords = new BigInteger[numReg][3];
-		AdditiveElgamalCiphertext[] passwordCiphers = new AdditiveElgamalCiphertext[numReg];
+		BigInteger[][][] passwords = new BigInteger[numReg][3][];
+		
+		AdditiveElgamalCiphertext[][] passwordCiphers = new AdditiveElgamalCiphertext[numReg][passwordNum];
 		//1/4 are good, 1/4 have bad passwords, 1/4 have good passwords and bad dummy flags, 1/4 have bad password and badd dummy flag 
 		SourceTransaction[] registration = new SourceTransaction[numReg];
 		
@@ -258,17 +261,26 @@ public class Test3 {
 		for(int i = 0; i < numReg; i++) {
 			voterPriv[i][0] = new AdditiveElgamalPrivKey(g, rand);
 			voterPriv[i][1] = new AdditiveElgamalPrivKey(g, rand);
-
-			passwords[i][0] = election.getMinerKey().generateEphemeral(rand);
-			do {
-				passwords[i][1] = election.getMinerKey().generateEphemeral(rand);
-				
-			} while(passwords[i][1].equals(BigInteger.ZERO));
-			passwords[i][2] = election.getMinerKey().generateEphemeral(rand);
+			passwords[i][0] = new BigInteger[passwordNum];
+			passwords[i][1] = new BigInteger[1];
+			passwords[i][2] = new BigInteger[1];
 			
-			passwordCiphers[i] = (AdditiveElgamalCiphertext) election.getMinerKey().combineKeys(voterPriv[i][0].getPubKey()).encrypt(passwords[i][0], rand);
+			for (int j = 0; j < passwordNum; j++) {
+				passwords[i][0][j] = election.getMinerKey().generateEphemeral(rand);
+				passwordCiphers[i][j] = (AdditiveElgamalCiphertext) election.getMinerKey().combineKeys(voterPriv[i][0].getPubKey()).encrypt(passwords[i][0][j], rand);
+			}
+			do {
+				passwords[i][1][0] = election.getMinerKey().generateEphemeral(rand);
+				
+			} while(passwords[i][1][0].equals(BigInteger.ZERO));
+			passwords[i][2][0] = election.getMinerKey().generateEphemeral(rand);
 			if(i%2 == 0) {
-				registration[i] = new RegistrationTransaction((AdditiveElgamalPubKey) voterPriv[i][0].getPubKey(), passwordCiphers[i], rand);
+				if(i%4 == 0) {
+					registration[i] = new SpoilTransaction(voterPriv[i][0], passwordCiphers[i], minerKey.encrypt(BigInteger.ZERO, rand), null, rand);
+				}
+				else {
+					registration[i] = new RegistrationTransaction((AdditiveElgamalPubKey) voterPriv[i][0].getPubKey(), passwordCiphers[i], rand);
+				}
 			} else {
 				registration[i] = new SpoilTransaction(voterPriv[i][0], passwordCiphers[i], minerKey.encrypt(BigInteger.ONE, rand), null, rand);
 			}
@@ -319,9 +331,9 @@ public class Test3 {
 			}
 			BallotT ballot;
 			if((i%4/2) == 0) {
-				ballot = new BallotTransaction5(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0], passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
+				ballot = new BallotTransaction6(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], passwords[i][0][0], passwords[i][1][0], electionTx, encryptedVotes[i], passwords[i][2][0], rand);
 			} else {
-				ballot = new BallotTransaction5(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], minerKey.generateEphemeral(rand), passwords[i][1], electionTx, encryptedVotes[i], passwords[i][2], rand);
+				ballot = new BallotTransaction6(ring, sourcePos, voterPriv[i][0], voterPriv[i][1], minerKey.generateEphemeral(rand), passwords[i][1][0], electionTx, encryptedVotes[i], passwords[i][2][0], rand);
 			}
 			try {
 				outBallots.writeUnshared(ballot);

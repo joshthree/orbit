@@ -152,5 +152,9 @@ public class PaillierPubKey implements Additive_Pub_Key{
 	public byte[] getBytes() {
 		return Arrays.concatenate(n.toByteArray(), g.toByteArray());
 	}
+	@Override
+	public boolean isSharable() {
+		return false;
+	}
 	
 }

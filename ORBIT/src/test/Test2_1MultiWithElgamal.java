@@ -15,7 +15,7 @@ import election.EncryptedVote;
 import zero_knowledge_proofs.ZKToolkit;
 
 public class Test2_1MultiWithElgamal {
-	public static void main2(String arg[]) {
+	public static void main(String arg[]) {
 		ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("secp256k1");
 		int numRaces = Integer.parseInt(arg[0]);
 		int numCandidates = Integer.parseInt(arg[1]);
