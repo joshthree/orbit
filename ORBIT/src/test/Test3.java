@@ -37,7 +37,6 @@ import election.singleCipherSVHNw.SVHNwVoterDecision;
 import transactions.BallotT;
 import transactions.BallotTransaction1;
 import transactions.BallotTransaction2;
-import transactions.BallotTransaction3Failed;
 import transactions.BallotTransaction4;
 import transactions.BallotTransaction4_1;
 import transactions.BallotTransaction5;
